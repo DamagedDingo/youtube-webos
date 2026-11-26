@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+## Added
+
++ "Filters" tab (its own tab in the settings, off by default except where noted): every cosmetic filter moves off the Main page, which keeps Ad Blocking. News shelves are removed from Home and Search ("Remove News Shelves", on by default); unwanted guide entries are hidden by title, so the left-hand rail loses News, Sport and Movies & TV with the list editable in the panel ("Hide Unwanted Guide Entries" + "Guide entries to hide", on by default); members-only and early-access tiles are hidden by their badge, and the voice search button is gone along with the web-speech launch params ("Hide Members-only Videos", "Hide Voice Search Button", on by default)
+
 ## [0.8.5] - 2026/11/13
 
 A big one under the hood. Most of this release is based on @mirijanristic's fork (https://github.com/mirijanristic/youtube-webos): the codebase is now split into small modules with an automated test suite, both .ipk files are smaller, and a long list of bugs is fixed. Thanks!
