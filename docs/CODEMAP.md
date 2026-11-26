@@ -2,7 +2,7 @@
 
 Generated from the source by `tools/codemap.mjs`; do not edit it by hand. After changing code, run `npm run codemap` (`npm test` fails while the map is out of date). A function's description is the comment right above it in the source: improve it there.
 
-**168 modules, 1056 named functions**, 795 of them described (the perf monitor in `src/dev/` is a development tool, not in release builds, and is listed in short form). This page is the index; each folder has a page in [codemap/](codemap/) with every function of its modules. The overview (boot order, the hooks, how a response flows through the filters) is [ARCHITECTURE.md](ARCHITECTURE.md); the same data for scripts is [codemap.json](codemap.json).
+**168 modules, 1058 named functions**, 797 of them described (the perf monitor in `src/dev/` is a development tool, not in release builds, and is listed in short form). This page is the index; each folder has a page in [codemap/](codemap/) with every function of its modules. The overview (boot order, the hooks, how a response flows through the filters) is [ARCHITECTURE.md](ARCHITECTURE.md); the same data for scripts is [codemap.json](codemap.json).
 
 How to read it:
 
@@ -89,7 +89,7 @@ How to read it:
 | [features/force-codec/index.js](codemap/features-force-codec.md#mod-index-js) | 122 | 3 | Force Video Codec: the setting's switch, the codec hooks and the filter of the formats a player response offers. |
 | [features/force-codec/log.js](codemap/features-force-codec.md#mod-log-js) | 4 | 0 | The logger of the feature's modules: their messages carry [ForceCodec] (core/log.js). |
 | [features/force-codec/state.js](codemap/features-force-codec.md#mod-state-js) | 25 | 0 | What the force-codec modules share: the pinned modes and the mutable state on `fc`: the active mode, whether the hooks are in, the saved originals and the per-video fallback flag. |
-| [features/hide-guide-entries.js](codemap/features.md#mod-hide-guide-entries-js) | 90 | 4 | The left-hand guide's entries, hidden in the DOM rather than in the response. |
+| [features/hide-guide-entries.js](codemap/features.md#mod-hide-guide-entries-js) | 158 | 6 | The left-hand guide's entries, hidden in the DOM rather than in the response. |
 | [features/lang-settings-fix.ts](codemap/features.md#mod-lang-settings-fix-ts) | 57 | 2 | Adapted from https://github.com/reisxd/TizenTube/blob/522f83cc012d5b1c75181b651e084a3afa280323/mods/resolveCommand.js |
 | [features/logo-style.js](codemap/features.md#mod-logo-style-js) | 39 | 2 | YouTube wordmark selection (Interface -> YouTube Logo). |
 | [features/playback-speed/controller.js](codemap/features-playback-speed.md#mod-controller-js) | 239 | 18 | The playback speed: what it is, changing it, and the audio engine that plays the sound at it. |

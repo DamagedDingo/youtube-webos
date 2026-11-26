@@ -2955,8 +2955,8 @@
   },
   {
    "path": "features/hide-guide-entries.js",
-   "lines": 90,
-   "header": "The left-hand guide's entries, hidden in the DOM rather than in the response.\n\nThe response filter (features/adblock/nav-filters.js) only reaches the guide when YouTube hands it over as JSON this script can intercept; on webOS 25 the guide arrives already rendered, so Shorts, News, Sport and Movies & TV stay in the rail. This walks the rendered entries and takes the named ones out, and keeps doing so while the guide re-renders (a launch, a sign-in, a tab change).",
+   "lines": 158,
+   "header": "The left-hand guide's entries, hidden in the DOM rather than in the response.\n\nThe response filter (features/adblock/nav-filters.js) only reaches the guide when YouTube hands it over as JSON this script can intercept; on webOS 25 the guide arrives already rendered, so Shorts, News, Sport and Movies & TV stay in the rail. This marks the rendered entries and keeps marking them while the guide re-renders (a launch, a sign-in, a tab change).\n\nMarked, not removed: the rail is a virtualised list, and taking nodes out of it makes YouTube re-render the wrong ones — on the C2 the expanded rail lost its Settings entry while the collapsed rail still showed the entries that had been removed. A CSS rule hides the marked entries in both rails, and an entry that stops matching gets its mark taken off again.",
    "imports": [
     {
      "from": "core/config.js",
@@ -2985,8 +2985,10 @@
    },
    "functions": [
     "features/hide-guide-entries.js#hiddenTitles",
+    "features/hide-guide-entries.js#entryTitle",
     "features/hide-guide-entries.js#prune",
     "features/hide-guide-entries.js#createScheduler",
+    "features/hide-guide-entries.js#addsGuideEntry",
     "features/hide-guide-entries.js#initHideGuideEntries"
    ]
   },
@@ -15702,8 +15704,8 @@
    "params": "",
    "exported": false,
    "lines": [
-    17,
-    30
+    33,
+    46
    ],
    "description": "The lower-cased titles the user asked to hide: the list, plus Shorts while that is hidden.",
    "calls": [
@@ -15721,18 +15723,34 @@
    ]
   },
   {
+   "id": "features/hide-guide-entries.js#entryTitle",
+   "name": "entryTitle",
+   "kind": "function",
+   "params": "entry",
+   "exported": false,
+   "lines": [
+    52,
+    56
+   ],
+   "description": "An entry's name: the aria-label, which is where the icon-only rail keeps it, or the rendered text when there is no label.",
+   "calledBy": [
+    "features/hide-guide-entries.js#prune"
+   ]
+  },
+  {
    "id": "features/hide-guide-entries.js#prune",
    "name": "prune",
    "kind": "function",
    "params": "",
    "exported": false,
    "lines": [
-    36,
-    50
+    63,
+    83
    ],
-   "description": "Takes the named guide entries out of the rail. The label is the entry's aria-label: the rail is icon-only, so that is where its name lives.",
+   "description": "Marks the named guide entries, and unmarks the ones that no longer match, so a changed list or a switched-off filter puts them back. Nothing is removed: see the note at the top of the file.",
    "calls": [
     "core/config.js#configRead",
+    "features/hide-guide-entries.js#entryTitle",
     "features/hide-guide-entries.js#hiddenTitles"
    ],
    "settings": {
@@ -15754,16 +15772,31 @@
    "params": "",
    "exported": false,
    "lines": [
-    53,
-    67
+    86,
+    100
    ],
-   "description": "Runs `prune` once per animation frame, however many mutations arrive.",
+   "description": "Runs `prune` once per tick, however many mutations arrive.",
    "calls": [
     "features/hide-guide-entries.js#prune"
    ],
    "browser": [
-    "requestAnimationFrame"
+    "setTimeout"
    ],
+   "calledBy": [
+    "features/hide-guide-entries.js#initHideGuideEntries"
+   ]
+  },
+  {
+   "id": "features/hide-guide-entries.js#addsGuideEntry",
+   "name": "addsGuideEntry",
+   "kind": "function",
+   "params": "record",
+   "exported": false,
+   "lines": [
+    113,
+    128
+   ],
+   "description": "Whether a mutation record adds a guide entry, or a guide container a rebuilt rail will be rendered through. Every other DOM change on the page is none of this module's business: answering yes to all of them puts a prune on every frame the app draws, which starves the features that do work per frame.\n\nThe check is a tag-name compare, not a selector. A shelf or tile mount (behaviour/thumbnail-quality mounts 240 tiles) adds hundreds of elements per page, and a matches()/querySelector() per added node is selector work the observer has no business charging to it.",
    "calledBy": [
     "features/hide-guide-entries.js#initHideGuideEntries"
    ]
@@ -15775,12 +15808,13 @@
    "params": "",
    "exported": true,
    "lines": [
-    74,
-    90
+    135,
+    158
    ],
-   "description": "Starts hiding the named guide entries and keeps hiding them: the guide is rebuilt on launch, sign-in and tab changes, and each rebuild brings the entries back.",
+   "description": "Starts hiding the named guide entries and keeps hiding them: the guide is rebuilt on launch, sign-in and tab changes, and each rebuild brings the entries back unmarked.",
    "calls": [
     "core/config.js#configAddChangeListener",
+    "features/hide-guide-entries.js#addsGuideEntry",
     "features/hide-guide-entries.js#createScheduler"
    ],
    "settings": {
