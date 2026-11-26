@@ -115,8 +115,6 @@ export function handleLaunch(params) {
 
   if (ytURL.searchParams.get('theme') === 'k') {
     ytURL.searchParams.delete('env_forceFullAnimation');
-    ytURL.searchParams.delete('env_enableWebSpeech');
-    ytURL.searchParams.delete('env_enableVoice');
   }
 
   window.location.href = ytURL.toString();

@@ -33,7 +33,9 @@ const t = report.check;
       };
       return { sb: sandbox, win, lines, launch };
     };
-    const ENV = ['env_forceFullAnimation', 'env_enableWebSpeech', 'env_enableVoice'];
+    // The flag the launcher always sets. Web speech and voice are deliberately
+    // not asked for: they raise LG's terms dialog (core/launch.js).
+    const ENV = ['env_forceFullAnimation'];
     const hasEnv = (u) => ENV.every((k) => u.searchParams.get(k) === '1');
 
     let r = loadLaunch('{"contentTarget":"v=abc"}');
@@ -78,11 +80,11 @@ const t = report.check;
 
     let u = loadLaunch().launch({});
     t(
-      'an empty launch goes to youtube.com/tv#/ with the three env flags',
+      'an empty launch goes to youtube.com/tv#/ with the one env flag',
       u.origin + u.pathname === 'https://www.youtube.com/tv' &&
         u.hash === '#/' &&
         hasEnv(u) &&
-        [...u.searchParams].length === 3,
+        [...u.searchParams].length === 1,
       u.href
     );
     u = loadLaunch().launch(undefined);
@@ -171,7 +173,7 @@ const t = report.check;
 
     u = loadLaunch().launch({ contentTarget: 'theme=k' });
     t(
-      'theme=k strips the three env flags',
+      'theme=k strips the env flag',
       u.searchParams.get('theme') === 'k' && ENV.every((k) => !u.searchParams.has(k)),
       u.href
     );

@@ -19,7 +19,7 @@ const modern = process.argv[3] === 'modern';
 // Three shapes of launch parameters, enough to show the launcher runs under
 // the downgrade; the URL grammar itself is tests/unit/core-launch-test.cjs.
 const cases = [
-  [{}, ['env_forceFullAnimation=1', 'env_enableWebSpeech=1', 'env_enableVoice=1']],
+  [{}, ['env_forceFullAnimation=1']],
   [{ contentTarget: 'https://www.youtube.com/tv?v=abc&t=5' }, ['v=abc', 't=5']],
   [
     { contentTarget: { intent: 'PlayContent', intentParam: 'lofi beats' } },
