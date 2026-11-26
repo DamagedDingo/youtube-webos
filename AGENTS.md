@@ -113,13 +113,22 @@ plus these fork commits is 0.8.6, tagged `v0.8.6`. Fork-only test builds keep a 
 raised from 240 KiB in 0.8.6 because the Filters work ships to both flavours and the legacy bundle landed
 at 247,287 bytes.
 
+**`release.yml` owns a release.** Push a `v*.*` tag, or `gh workflow run release.yml -f tag=v<version>`
+for an existing tag. It builds both bundles, packages both flavours, attaches them plus the manifest to a
+**draft**, then un-drafts it - the draft is what makes the published release carry final assets from the
+first second it is visible. `build_repo.yml` is dispatched at the end (see below), and the run fails if
+`repo.json` on `main` does not end up naming both assets with matching SHA-256s.
+
+Doing it by hand is still allowed, but keep the same order:
+
 1. Build both bundles and package each: legacy → `youtube.leanback.v4_<version>_all.ipk`,
    `build:modern` → `youtube.leanback.v4_<version>_all_webOS22+.ipk`.
 2. Create the release **as a draft** on tag `v<version>` (or `v<version>-<suffix>`) with both ipks
    attached. Assets on a published release are a one-way door, so they must be there before it is visible.
 3. Publish the draft (`gh release edit v<version> --draft=false`). `build_repo.yml` runs on
-   `release: published`, regenerates `repo.json` from the published asset URLs and their SHA-256s, and
-   commits it to `main`. Watch it happen: `gh run list --limit 5`.
+   `release: published` (the event fires when a *person* publishes, not when a workflow does),
+   regenerates `repo.json` from the published asset URLs and their SHA-256s, and commits it to `main`.
+   Watch it happen: `gh run list --limit 5`.
 4. Verify like a consumer: download both `ipkUrl`s from the committed `repo.json` and match their SHA-256s.
 5. If no run appears, `gh workflow run build_repo.yml --ref main` and repeat step 4. A release is not done
    until `repo.json` on `main` names it.
@@ -128,10 +137,17 @@ at 247,287 bytes.
 verifies it: a rebuilt asset leaves a stale hash and installs fail. A rebuild is a new version and a new
 release.
 
-**`release.yml` is disabled on this fork** (`gh workflow list --all` shows `disabled_manually`). Its tag
-trigger builds only the legacy bundle and uploads with `allowUpdates: true`, so it would overwrite both
-assets of a release after `build_repo.yml` hashed them. Leave it disabled until it builds both flavours;
-publishing a release is the only path that produces assets here.
+**`ares-package` is not byte-reproducible.** Two runs of `npm run package` over the same `dist/` produced
+`04ffd84e…` and `825bb1fe…` (zip timestamps), so a rebuild could never keep `repo.json`'s hash valid.
+`release.yml` therefore never re-uploads: a second run for an already-published tag says so and exits 0
+without touching either asset. A leftover *draft* is deleted and rebuilt - nothing has hashed a draft.
+
+**A workflow cannot wake another workflow through an event.** GitHub starts no run for an event raised by
+`GITHUB_TOKEN`, with `workflow_dispatch` and `repository_dispatch` as the documented exceptions. A release
+published by `release.yml` therefore does *not* fire `build_repo.yml`'s `release: published` trigger - the
+only release-event run this fork ever produced came from a hand-published release - so `release.yml` runs
+`gh workflow run build_repo.yml --ref main` itself and watches it. `build_repo.yml` has a `build-repo`
+concurrency group so a dispatched run and an event run cannot race each other's commit to `main`.
 
 **Events do start workflows now, but the flag does not tell you.** From the fork's creation until
 2026-11-26 09:30 UTC, pushes, PRs, tags and releases produced no run at all while `workflow_dispatch`
@@ -139,7 +155,10 @@ worked, and `GET /repos/{owner}/{repo}/actions/permissions` still said `enabled:
 `PUT /repos/{owner}/{repo}/actions/permissions -F enabled=true` fixed it. After any push or release,
 check `gh run list` rather than assuming, and never use the `enabled` flag as evidence that events work.
 
-**`.github/workflows/**` cannot be pushed with the `gh` OAuth token on this machine.** It lacks the
-`workflow` scope: `git push` is refused with "refusing to allow an OAuth App to create or update workflow
-… without `workflow` scope" and the contents API answers 404. Run `gh auth refresh -s workflow` before
-changing a workflow file.
+**`.github/workflows/**` needs the `workflow` scope, which the `gh` OAuth token here does not have.**
+`git push` over HTTPS is refused with "refusing to allow an OAuth App to create or update workflow
+… without `workflow` scope" and the contents API answers 404. Git pushes over **SSH** are not affected:
+`~/.ssh/id_ed25519` is registered on the account as "hermes@KDE-laptop", so push workflow changes with
+`git push git@github.com:DamagedDingo/youtube-webos.git HEAD:refs/heads/<branch>` (`gh auth refresh
+-s workflow` also works but wants a browser).
+
