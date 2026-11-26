@@ -16,6 +16,13 @@ body.ytaf-hide-controls .ytLrWatchDefault2025Shadow {
   opacity: 0 !important;
 }
 
+/* The guide entries the filter hides (features/hide-guide-entries.js marks them
+   with the attribute). Hidden, not removed: the rail is a virtualised list, and
+   removed nodes come back as a wrong entry on the next render. */
+ytlr-guide-entry-renderer[data-ytaf-guide-hidden] {
+  display: none !important;
+}
+
 /* OLED-care mode (html.ytaf-oled): black behind YouTube's surfaces. The rules
    that only apply above 50 % shelf opacity sit under
    html.ytaf-oled-transparent-shelf. */
