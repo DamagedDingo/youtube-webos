@@ -148,10 +148,13 @@ async function showPanel(target, pump) {
   win.ytaf_showOptionsPanel(true);
   const built = await waitFor(() => {
     if (pumpFrames) pumpFrames();
-    return win.document.querySelectorAll('.ytaf-settings-page').length === 5;
+    // One page per tab: the count follows the panel's tab list rather than a
+    // fixed number that every added page would break.
+    const tabs = win.document.querySelectorAll('.ytaf-tab-btn').length;
+    return tabs > 0 && win.document.querySelectorAll('.ytaf-settings-page').length === tabs;
   }, 3000);
   if (!built) {
-    throw new Error('showPanel: the five panel pages were not built (frames not pumped?)');
+    throw new Error('showPanel: the panel pages were not built (frames not pumped?)');
   }
   await waitFor(() => win.ytaf_panelTakesToggles(), 10000);
   return win.document.querySelector('.ytaf-ui-container');

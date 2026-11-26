@@ -19,6 +19,7 @@ const HTML_CLASSES = [
   { cls: 'ytaf-fix-search-font', keys: ['fixSearchFont'], on: (c) => !!c.fixSearchFont },
   { cls: 'ytaf-remove-borders', keys: ['removeBlackBorders'], on: (c) => !!c.removeBlackBorders },
   { cls: 'ytaf-theme-red', keys: ['uiTheme'], on: (c) => c.uiTheme === 'classic-red' },
+  { cls: 'ytaf-hide-voice', keys: ['hideVoiceButton'], on: (c) => !!c.hideVoiceButton },
   { cls: 'ytaf-oled', keys: ['enableOledCareMode'], on: (c) => !!c.enableOledCareMode },
   {
     cls: 'ytaf-oled-transparent-shelf',

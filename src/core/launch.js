@@ -45,13 +45,16 @@ export function hasLaunchTarget(params) {
 }
 
 /**
- * The YouTube TV start URL, with the flags the app always sets (full animation, web speech, voice).
+ * The YouTube TV start URL, with the flag the app always sets (full animation).
+ *
+ * Voice and web speech are left off on purpose: YouTube's mic asks webOS for
+ * speech recognition, which means LG's terms dialog on every press, and that
+ * dialog cannot be cancelled from the remote (ui/styles/global.css also hides
+ * the button).
  */
 function getYTURL() {
   const ytURL = new URL('https://www.youtube.com/tv#/');
   ytURL.searchParams.set('env_forceFullAnimation', '1');
-  ytURL.searchParams.set('env_enableWebSpeech', '1');
-  ytURL.searchParams.set('env_enableVoice', '1');
   return ytURL;
 }
 

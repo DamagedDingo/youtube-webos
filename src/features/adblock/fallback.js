@@ -2,7 +2,7 @@
 // for the small guide response: one bounded search over the body serves both.
 import { log } from './log.js';
 import { findObjects } from './search.js';
-import { filterNavLists } from './nav-filters.js';
+import { filterNavLists, anyNavFilter } from './nav-filters.js';
 import { filterSectionList } from './item-filters.js';
 import { removeEndcards, removePlayerAds } from './player-filters.js';
 import { filterList, processActions } from './response-filters.js';
@@ -27,8 +27,8 @@ const FALLBACK_NEEDLES = [
 ].concat(NAV_NEEDLES);
 
 /** The guide lists in a findObjects() result, filtered. */
-function filterNavFound(found, removeGlobalShorts, removeLiveVideos) {
-  if (!removeGlobalShorts && !removeLiveVideos) return;
+function filterNavFound(found, flags) {
+  if (!anyNavFilter(flags)) return;
   filterNavLists(
     [
       found.tvSecondaryNavRenderer?.sections,
@@ -38,8 +38,7 @@ function filterNavFound(found, removeGlobalShorts, removeLiveVideos) {
       found.sections,
       found.items
     ],
-    removeGlobalShorts,
-    removeLiveVideos
+    flags
   );
 }
 
@@ -48,9 +47,9 @@ function filterNavFound(found, removeGlobalShorts, removeLiveVideos) {
  * searched for the guide and tab renderers (bounded) and filtered. The known
  * shape, BROWSE_TABS, goes through removeBlockedNavTabs instead.
  */
-export function removeBlockedNavEntries(data, removeGlobalShorts, removeLiveVideos) {
+export function removeBlockedNavEntries(data, flags) {
   if (!data || typeof data !== 'object') return;
-  filterNavFound(findObjects(data, NAV_NEEDLES, 8), removeGlobalShorts, removeLiveVideos);
+  filterNavFound(findObjects(data, NAV_NEEDLES, 8), flags);
 }
 
 /** A large body no schema path matched: the content and guide filters over whatever the search finds. */

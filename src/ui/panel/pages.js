@@ -38,8 +38,9 @@ const footNote = (text) => createElement('div', {}, createElement('small', { tex
 
 // --- Page 1: Main ---
 /**
- * The Main page: Cosmetic Filtering (Ad Blocking and the filters that depend on it, greyed out
- * while it is off), then the other features.
+ * The Main page: Ad Blocking and Tracking Block (the switches the other filters
+ * ride on), then the player and interface settings. Everything that only hides
+ * something lives on the Filters page.
  */
 export function buildMainPage() {
   const pageMain = createElement('div', { class: 'ytaf-settings-page', id: 'ytaf-page-main' });
@@ -47,24 +48,11 @@ export function buildMainPage() {
   const elAdBlock = createConfigCheckbox('enableAdBlock');
   const elTrackingBlock = createConfigCheckbox('enableTrackingBlock');
   const cosmeticGroup = [elAdBlock, elTrackingBlock];
-  const elRemoveGlobalShorts = createConfigCheckbox('removeGlobalShorts');
-  const elRemoveLiveVideos = createConfigCheckbox('removeLiveVideos');
-  const elRemoveTopLiveGames = createConfigCheckbox('removeTopLiveGames');
-  const elRemoveMostRelevant = createConfigCheckbox('removeMostRelevant');
-  cosmeticGroup.push(
-    elRemoveGlobalShorts,
-    elRemoveLiveVideos,
-    elRemoveTopLiveGames,
-    elRemoveMostRelevant,
-    createConfigCheckbox('removeNewsShelves')
-  );
-  if (isGuestMode()) cosmeticGroup.push(createConfigCheckbox('hideGuestSignInPrompts'));
 
   pageMain.appendChild(createSection('Cosmetic Filtering', cosmeticGroup, 'ytaf-section-2col'));
 
-  // Tracking Block and the cosmetic filters ride on the same hooks as Ad
-  // Blocking and do nothing while it is off.
-  // Every row of the group after Ad Blocking itself.
+  // Tracking Block rides on the same hooks as Ad Blocking and does nothing
+  // while it is off.
   const adBlockDependents = cosmeticGroup.slice(1);
 
   /** Greys out the rows that depend on Ad Blocking while it is off. */
@@ -94,13 +82,61 @@ export function buildMainPage() {
       createLogoControl(),
       createChoiceControl('showWatch', clockModes),
       createConfigCheckbox('enableOledCareMode'),
-      createConfigCheckbox('disableNotifications')
+      createConfigCheckbox('disableNotifications'),
+      createConfigCheckbox('hideVoiceButton')
     ])
   );
   return pageMain;
 }
 
-// --- Page 2: SponsorBlock ---
+// --- Page 2: Filters ---
+/**
+ * The Filters page: everything that only removes something from YouTube's own
+ * UI. All of it rides on Ad Blocking (Main), so the rows are greyed out while
+ * that is off.
+ */
+export function buildFiltersPage() {
+  const pageFilters = createElement('div', {
+    class: 'ytaf-settings-page',
+    id: 'ytaf-page-filters',
+    style: { display: 'none' }
+  });
+
+  const rows = [
+    createConfigCheckbox('removeGlobalShorts'),
+    createConfigCheckbox('removeLiveVideos'),
+    createConfigCheckbox('removeTopLiveGames'),
+    createConfigCheckbox('removeMostRelevant'),
+    createConfigCheckbox('removeNewsShelves'),
+    createConfigCheckbox('hideMembersOnly'),
+    createConfigCheckbox('hideGuideEntries')
+  ];
+  if (isGuestMode()) rows.push(createConfigCheckbox('hideGuestSignInPrompts'));
+  pageFilters.appendChild(createSection('Home, Search and Guide', rows, 'ytaf-section-2col'));
+
+  /** Greys out every row while Ad Blocking (Main) is off. */
+  const updateDependencyState = () => {
+    const enabled = configRead('enableAdBlock');
+    rows.forEach((el) => {
+      setUnavailable(el, !enabled);
+    });
+  };
+  configAddChangeListener('enableAdBlock', updateDependencyState);
+  updateDependencyState();
+
+  // The guide titles are a list, not a switch: shown so it is clear what the
+  // guide switch is hiding.
+  const guideNote = helpLine('');
+  const syncGuideNote = () => {
+    guideNote.textContent = `Guide entries hidden: ${configRead('hideGuideTitles') || 'none'}`;
+  };
+  syncGuideNote();
+  configAddChangeListener('hideGuideTitles', syncGuideNote);
+  pageFilters.appendChild(guideNote);
+  return pageFilters;
+}
+
+// --- Page 3: SponsorBlock ---
 /** The SponsorBlock page: the switch, one row per category, and the SponsorBlock options. */
 export function buildSponsorPage() {
   const pageSponsor = createElement('div', {

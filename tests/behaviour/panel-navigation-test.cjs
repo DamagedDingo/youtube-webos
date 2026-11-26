@@ -99,12 +99,14 @@ function expectFocus(what, expected) {
   for (let i = 0; i < tabs.length; i++) place(tabs[i], i * 200, 0, 180, 80);
   const pages = panel.querySelectorAll('.ytaf-settings-page');
   for (let i = 0; i < pages.length; i++) layoutPage(pages[i]);
-  t('setup: all five pages are laid out', pages.length === 5, String(pages.length));
+  t('setup: all six pages are laid out', pages.length === 6, String(pages.length));
 
   // ---- the tab bar -------------------------------------------------------------
   expectFocus('opening the panel', 'tab Main');
   press(KEYS.RIGHT);
-  expectFocus('Right from Main', 'tab SponsorBlock');
+  expectFocus('Right from Main', 'tab Filters');
+  press(KEYS.RIGHT);
+  expectFocus('Right from Filters', 'tab SponsorBlock');
   press(KEYS.RIGHT);
   expectFocus('Right from SponsorBlock', 'tab DeArrow');
   press(KEYS.RIGHT);
@@ -118,37 +120,59 @@ function expectFocus(what, expected) {
   press(KEYS.LEFT);
   press(KEYS.LEFT);
   press(KEYS.LEFT);
-  expectFocus('Left four times more', 'tab Main');
+  press(KEYS.LEFT);
+  expectFocus('Left five times more', 'tab Main');
   t(
     'the Main page is still the open one',
     d.querySelector('#ytaf-page-main').style.display !== 'none'
   );
 
-  // ---- into the page and around the two-column section ----------------------------
-  press(KEYS.DOWN);
-  expectFocus('Down from the Main tab', 'Ad Blocking');
+  // ---- the Filters page, and its two-column section ------------------------------
   press(KEYS.RIGHT);
-  expectFocus('Right in the first two-column row', 'Reduce Telemetry & Tracking');
+  expectFocus('Right onto the Filters tab', 'tab Filters');
+  press(KEYS.ENTER);
+  for (let i = 0; i < 4; i++) pump();
+  t(
+    'Enter on the Filters tab opens that page',
+    d.querySelector('#ytaf-page-filters').style.display !== 'none'
+  );
+  press(KEYS.DOWN);
+  expectFocus('Down from the Filters tab', 'Remove Shorts (Global)');
+  press(KEYS.RIGHT);
+  expectFocus('Right in the first two-column row', 'Remove Live Videos (Global)');
   press(KEYS.LEFT);
-  expectFocus('Left back again', 'Ad Blocking');
+  expectFocus('Left back again', 'Remove Shorts (Global)');
   press(KEYS.DOWN);
-  expectFocus('Down in the first column', 'Remove Shorts (Global)');
+  expectFocus('Down in the first column', 'Remove Top Live Games');
   press(KEYS.RIGHT);
-  press(KEYS.DOWN);
-  expectFocus('Down in the second column', 'Remove "Most Relevant" Shelf');
+  expectFocus('Right into the second column', 'Remove "Most Relevant" Shelf');
   press(KEYS.RIGHT);
   expectFocus('Right at the end of a row stays put', 'Remove "Most Relevant" Shelf');
   press(KEYS.DOWN);
-  expectFocus('Down from the second column onto a full-width row', 'Force Max Quality');
+  expectFocus('Down from the second column', 'Hide Members-only Videos');
+  press(KEYS.DOWN);
+  expectFocus('Down onto the odd last row', 'Hide Unwanted Guide Entries');
+  press(KEYS.RIGHT);
+  expectFocus('Right on the odd last row stays put', 'Hide Unwanted Guide Entries');
   press(KEYS.UP);
-  expectFocus('Up from a full-width row lands on the odd last row', 'Remove News Shelves');
-  press(KEYS.UP);
-  expectFocus('Up from the odd last row rejoins the column above', 'Remove Top Live Games');
+  expectFocus('Up from the odd last row rejoins the left column', 'Remove News Shelves');
   press(KEYS.UP);
   press(KEYS.UP);
-  expectFocus('Up twice more climbs the column', 'Ad Blocking');
+  expectFocus('Up twice more climbs the column', 'Remove Shorts (Global)');
   press(KEYS.UP);
-  expectFocus('Up from the first row lands on the open tab', 'tab Main');
+  expectFocus('Up from the first row lands on the open tab', 'tab Filters');
+
+  // Back to the Main page for the rest of the checks: the tab bar is walked
+  // with the remote, and Enter opens the page under the focused tab.
+  press(KEYS.LEFT);
+  expectFocus('Left onto the Main tab', 'tab Main');
+  press(KEYS.ENTER);
+  for (let i = 0; i < 4; i++) pump();
+  t(
+    'Enter on the Main tab reopens the Main page',
+    d.querySelector('#ytaf-page-main').style.display !== 'none' &&
+      d.querySelector('#ytaf-page-filters').style.display === 'none'
+  );
 
   // ---- cycle rows keep Left and Right ------------------------------------------------
   const codecRow = d.querySelector('#ytaf-page-main .ytaf-cycle-row');
@@ -179,8 +203,13 @@ function expectFocus(what, expected) {
   t('Up from the tab wraps to the last control', d.activeElement === last, focused());
 
   // ---- a hidden page is not a candidate -----------------------------------------------
-  tabs[1].click();
-  tabs[1].focus();
+  press(KEYS.DOWN);
+  expectFocus('Down from the last control onto the open tab', 'tab Main');
+  press(KEYS.RIGHT);
+  press(KEYS.RIGHT);
+  expectFocus('Right onto the SponsorBlock tab', 'tab SponsorBlock');
+  press(KEYS.ENTER);
+  for (let i = 0; i < 4; i++) pump();
   press(KEYS.DOWN);
   t(
     'Down from the SponsorBlock tab enters the SponsorBlock page, not the hidden Main page',
@@ -192,8 +221,11 @@ function expectFocus(what, expected) {
   expectFocus('Up from its first row returns to the SponsorBlock tab', 'tab SponsorBlock');
 
   // ---- Enter, Back and Escape ----------------------------------------------------------
-  tabs[0].click();
-  tabs[0].focus();
+  press(KEYS.LEFT);
+  press(KEYS.LEFT);
+  expectFocus('Left twice from SponsorBlock onto the Main tab', 'tab Main');
+  press(KEYS.ENTER);
+  for (let i = 0; i < 4; i++) pump();
   press(KEYS.DOWN);
   const box = d.activeElement;
   const was = box.checked;

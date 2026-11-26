@@ -10,6 +10,7 @@ import logoDarkUrl from '../icons/logo-dark.png';
 import { createElement } from '../dom.js';
 import {
   buildMainPage,
+  buildFiltersPage,
   buildSponsorPage,
   buildDeArrowPage,
   buildShortcutsPage,
@@ -28,6 +29,7 @@ const log = createLogger('Panel');
 // inside a page puts focus on the page's first control (pageFocusables).
 const PAGES = [
   { name: 'Main', build: buildMainPage },
+  { name: 'Filters', build: buildFiltersPage },
   { name: 'SponsorBlock', build: buildSponsorPage, hasPopup: true },
   { name: 'DeArrow', build: buildDeArrowPage },
   { name: 'Shortcuts', build: buildShortcutsPage },

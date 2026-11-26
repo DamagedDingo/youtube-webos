@@ -44,11 +44,7 @@ function filterShortsSequence(data, schema, config) {
  */
 function filterBrowseTabs(data, schema, config) {
   // The tab bar itself: Shorts and Live entries go before their content is looked at.
-  removeBlockedNavTabs(
-    getByPath(data, schema.navPath),
-    config.removeGlobalShorts,
-    config.removeLiveVideos
-  );
+  removeBlockedNavTabs(getByPath(data, schema.navPath), config);
   const tabs = getByPath(data, schema.tabsPath);
   if (!Array.isArray(tabs)) return;
   for (let i = 0; i < tabs.length; i++) {

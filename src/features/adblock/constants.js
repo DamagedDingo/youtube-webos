@@ -23,7 +23,11 @@ export const UI_STRINGS = {
   GUEST_PROMPT_TEXT: 'Sign in for better recommendations',
   // A shelf whose title matches this is a news shelf: 'News', 'Breaking news',
   // 'Live news'. Localised titles will not match.
-  NEWS_SHELF_TITLE_PATTERN: /\bnews\b/i
+  NEWS_SHELF_TITLE_PATTERN: /\bnews\b/i,
+  // A tile given the members-only (or members-first) badge: the text sits in a
+  // badge or overlay, so only those keys are matched (a video whose title talks
+  // about memberships must stay).
+  MEMBERS_BADGE_PATTERN: /members?[ -]?(only|first)/i
 };
 
 export const YT_CONSTANTS = {
@@ -45,6 +49,9 @@ export const CONFIG_KEYS = {
   LIVE_GAMES: 'removeTopLiveGames',
   MOST_RELEVANT: 'removeMostRelevant',
   NEWS: 'removeNewsShelves',
+  GUIDE: 'hideGuideEntries',
+  GUIDE_TITLES: 'hideGuideTitles',
+  MEMBERS: 'hideMembersOnly',
   GUEST_PROMPTS: 'hideGuestSignInPrompts',
   EMOJI_FIX: 'enableLegacyEmojiFix',
   ENDCARDS: 'hideEndcards',

@@ -31,6 +31,7 @@ import { initBlockWebOSCast } from './features/block-webos-cast.ts';
 import './features/return-dislike/index.js';
 import './features/video-quality/index.js';
 import { initLogoStyle } from './features/logo-style.js';
+import { initHideGuideEntries } from './features/hide-guide-entries.js';
 import './ui/index.js';
 import './features/sponsorblock/index.js';
 import './features/emoji-font/index.js';
@@ -60,6 +61,7 @@ if (typeof installBufferLimit === 'function' && getWebOSVersion() <= 4) {
 // (it rides on Ad Blocking, as the panel shows).
 initLogoStyle();
 startTrackingBlock();
+initHideGuideEntries();
 
 (function oneTimeParamsCheck() {
   const params = extractLaunchParams();

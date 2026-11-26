@@ -124,3 +124,11 @@ body [idomkey='shadow'] {
 body .ytLrWatchDefault2025Shadow {
   background-color: rgba(11, 11, 11, 0.5) !important;
 }
+
+/* The voice search button (html.ytaf-hide-voice): YouTube's mic asks webOS for
+   speech recognition, and LG answers with a terms dialog that the remote cannot
+   dismiss. core/launch.js also stops asking the site for web speech. */
+html.ytaf-hide-voice ytlr-search-voice,
+html.ytaf-hide-voice ytlr-search-voice-mic-button {
+  display: none !important;
+}

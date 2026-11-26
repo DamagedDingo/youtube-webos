@@ -37,6 +37,7 @@ const report = createReport();
 const t = report.check;
 const PAGES = [
   '#ytaf-page-main',
+  '#ytaf-page-filters',
   '#ytaf-page-sponsor',
   '#ytaf-page-dearrow',
   '#ytaf-page-shortcuts',
@@ -135,13 +136,13 @@ function boot() {
     );
 
     const tabs = panel.querySelectorAll('.ytaf-tab-btn');
-    t('setup: five tab buttons', tabs.length === 5, 'got ' + tabs.length);
+    t('setup: six tab buttons', tabs.length === 6, 'got ' + tabs.length);
 
-    // No frames pumped yet: jump straight to Shortcuts (page 4). An error in
+    // No frames pumped yet: jump straight to Shortcuts (page 5). An error in
     // the click handler would reach jsdom, not this call, and fail the
     // report's console.error check.
-    tabs[3].click();
-    const shortcuts = win.document.querySelector(PAGES[3]);
+    tabs[4].click();
+    const shortcuts = win.document.querySelector(PAGES[4]);
     t('Shortcuts page built on demand', !!shortcuts);
     t(
       'Shortcuts page is the visible one',
@@ -188,8 +189,8 @@ function boot() {
       return el ? el.getElementsByTagName('*').length : -1;
     });
     t(
-      'all five pages built after idle frames',
-      counts.length === 5 && counts.every((n) => n > 10),
+      'all six pages built after idle frames',
+      counts.length === PAGES.length && counts.every((n) => n > 10),
       JSON.stringify(counts)
     );
     // The deferred build must produce the same tree an all-synchronous one
@@ -306,12 +307,12 @@ function boot() {
     box.focus();
     tabMenu.dispatchEvent(new win.MouseEvent('mouseleave'));
     t('leaving the tab bar with focus on a page control changes nothing', d.activeElement === box);
-    tabs[4].click();
+    tabs[5].click();
     panel.querySelector('#ytaf-page-ui-tweaks input').focus();
     panel.querySelector('.ytaf-logo').click();
     t(
       'a logo click (the theme toggle) hands focus back to the open tab',
-      d.activeElement === tabs[4],
+      d.activeElement === tabs[5],
       d.activeElement && d.activeElement.className
     );
   }
@@ -319,7 +320,7 @@ function boot() {
   // ---- the colour picker ------------------------------------------------------
   {
     const { win, tabs } = open();
-    tabs[1].click();
+    tabs[2].click();
     const row = cycleRow(win, 'Sponsor', '#ytaf-page-sponsor');
     const input = row.querySelector('input[type="color"]');
     const reset = row.querySelector('.ytaf-color-reset');
@@ -354,7 +355,7 @@ function boot() {
   {
     // The row only works under OLED-Care Mode (the next case shows it without).
     const { win, tabs } = open({ config: { enableOledCareMode: true } });
-    tabs[4].click();
+    tabs[5].click();
     const row = cycleRow(win, 'Video shelf opacity', '#ytaf-page-ui-tweaks');
     const value = () => row.querySelector('.ytaf-value').textContent;
     row.focus();
@@ -379,7 +380,7 @@ function boot() {
 
   {
     const { win, tabs } = open({ config: { enableOledCareMode: true, videoShelfOpacity: '100' } });
-    tabs[4].click();
+    tabs[5].click();
     const row = cycleRow(win, 'Video shelf opacity', '#ytaf-page-ui-tweaks');
     row.focus();
     press(win, KEYS.LEFT, row);
@@ -393,7 +394,7 @@ function boot() {
   // ---- a shortcut row cycles through every action ---------------------------------
   {
     const { win, tabs } = open();
-    tabs[3].click();
+    tabs[4].click();
     const row = cycleRow(win, 'Key 1', '#ytaf-page-shortcuts');
     const value = () => row.querySelector('.ytaf-value').textContent;
     // Left and Right reach a cycle row only while it is the focused control.
@@ -525,7 +526,7 @@ function boot() {
   }
   {
     const { win, tabs } = open();
-    tabs[4].click();
+    tabs[5].click();
     t(
       'webOS 3: the UI Tweaks page has the emoji fix row',
       !!panelCheckbox(win, 'Emoji + Characters Fix')
@@ -533,7 +534,7 @@ function boot() {
   }
   {
     const { win, tabs } = open({ ua: 'webos23' });
-    tabs[4].click();
+    tabs[5].click();
     t(
       'webOS 5 and later: the emoji fix row is absent',
       panelCheckbox(win, 'Emoji + Characters Fix') === null
@@ -548,7 +549,7 @@ function boot() {
       'the red theme and OLED-care mode mark <html> together',
       html.contains('ytaf-theme-red') && html.contains('ytaf-oled')
     );
-    tabs[4].click();
+    tabs[5].click();
     const theme = cycleRow(win, 'UI Theme', '#ytaf-page-ui-tweaks');
     const value = () => theme.querySelector('.ytaf-value').textContent;
     t('setup: the theme row reads Classic Red', value() === 'Classic Red', value());
@@ -564,14 +565,19 @@ function boot() {
 
   // ---- the Main page's rows and layout rules ----
   {
-    const { win } = boot();
+    const { win, pump } = boot();
     press(win, KEYS.GREEN, win.document.body);
+    // The other pages build one per animation frame: the Filters page's row is
+    // only there once they have.
+    for (let i = 0; i < 20; i++) pump();
     const main = win.document.querySelector('#ytaf-page-main');
+    const filters = win.document.querySelector('#ytaf-page-filters');
     t(
-      'the Main page has the Remove Live Videos row and the YouTube Logo selector',
+      'the Main page has the YouTube Logo selector, the Filters page the Remove Live Videos row',
       !!main &&
-        /Remove Live Videos/.test(main.textContent) &&
-        /YouTube Logo/.test(main.textContent),
+        /YouTube Logo/.test(main.textContent) &&
+        !!filters &&
+        /Remove Live Videos/.test(filters.textContent),
       main && main.textContent.slice(0, 80)
     );
     // The stylesheet goes in once the bundle has run (core/styles.js).

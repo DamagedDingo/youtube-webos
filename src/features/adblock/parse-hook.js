@@ -141,11 +141,11 @@ function filterResponse(data, textLength, flags) {
     } else if (textLength > 10000) {
       if (isDebugEnabled()) logSchemaMiss(data, textLength);
       applyFallbackFilters(data, flags);
-    } else if (flags.removeGlobalShorts || flags.removeLiveVideos) {
+    } else if (flags.removeGlobalShorts || flags.removeLiveVideos || flags.guideTitles) {
       // The guide arrives in its own small response, which matches no
       // content schema and is under the fallback's size threshold; the
       // search is depth-bounded.
-      removeBlockedNavEntries(data, flags.removeGlobalShorts, flags.removeLiveVideos);
+      removeBlockedNavEntries(data, flags);
     }
   }
 

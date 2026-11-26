@@ -28,6 +28,10 @@ export const cfgFlags = {
   removeTopLiveGames: false,
   removeMostRelevant: false,
   removeNewsShelves: false,
+  hideMembersOnly: false,
+  hideGuideEntries: false,
+  // The guide titles to hide, lower-cased; null when the switch is off.
+  guideTitles: null,
   hideGuestSignInPrompts: false,
   enableLegacyEmojiFix: false,
   hideEndcards: false,
@@ -39,6 +43,16 @@ export const cfgFlags = {
 // cfgFlags with the legacy emoji fix off: what the filters get for a response
 // whose text holds nothing the fix would change (parse-hook.js).
 export const cfgFlagsNoEmoji = Object.assign({}, cfgFlags);
+
+/** 'News, Sport' as ['news', 'sport']: trimmed, lower-cased, empties dropped; null when nothing is left. */
+function parseGuideTitles(value) {
+  if (typeof value !== 'string') return null;
+  const titles = value
+    .split(',')
+    .map((title) => title.trim().toLowerCase())
+    .filter(Boolean);
+  return titles.length ? titles : null;
+}
 
 // Called after every recompute: what has to follow the flags outside the hook.
 const flagListeners = [];
@@ -65,6 +79,11 @@ function recomputeFilterFlags() {
   cfgFlags.removeTopLiveGames = adBlock && !!cfgSnapshot[CONFIG_KEYS.LIVE_GAMES];
   cfgFlags.removeMostRelevant = adBlock && !!cfgSnapshot[CONFIG_KEYS.MOST_RELEVANT];
   cfgFlags.removeNewsShelves = adBlock && !!cfgSnapshot[CONFIG_KEYS.NEWS];
+  cfgFlags.hideMembersOnly = adBlock && !!cfgSnapshot[CONFIG_KEYS.MEMBERS];
+  cfgFlags.hideGuideEntries = adBlock && !!cfgSnapshot[CONFIG_KEYS.GUIDE];
+  cfgFlags.guideTitles = cfgFlags.hideGuideEntries
+    ? parseGuideTitles(cfgSnapshot[CONFIG_KEYS.GUIDE_TITLES])
+    : null;
   cfgFlags.hideGuestSignInPrompts = adBlock && !!cfgSnapshot[CONFIG_KEYS.GUEST_PROMPTS];
   // Independent switches on the same hook. The emoji rewrite is for webOS 3
   // and 4 only, where the system font has no colour emoji.

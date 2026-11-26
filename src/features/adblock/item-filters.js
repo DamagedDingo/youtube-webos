@@ -94,6 +94,38 @@ function isGuestPrompt(item) {
   );
 }
 
+/** Keys whose subtree is a badge, an overlay or a label: where the members-only text lives. */
+const BADGE_KEY_PATTERN = /badge|overlay|label/i;
+
+/** How many objects the members-only scan may visit before giving up on one item. */
+const MEMBERS_SCAN_BUDGET = 160;
+
+/**
+ * Whether an item carries the members-only (or members-first) badge.
+ *
+ * The badge is text, not a badge style, and it sits somewhere under the tile's
+ * thumbnail overlays or its metadata rows, so the item is walked once, bounded,
+ * and only strings inside a badge/overlay/label subtree are tested: matching
+ * every string would drop a video whose title merely mentions memberships.
+ */
+function hasMembersBadge(item) {
+  const stack = [[item, false]];
+  let budget = MEMBERS_SCAN_BUDGET;
+  while (stack.length && budget-- > 0) {
+    const [node, underBadge] = stack.pop();
+    if (!node || typeof node !== 'object') continue;
+    for (const key in node) {
+      const value = node[key];
+      if (typeof value === 'string') {
+        if (underBadge && UI_STRINGS.MEMBERS_BADGE_PATTERN.test(value)) return true;
+      } else if (value && typeof value === 'object') {
+        stack.push([value, underBadge || BADGE_KEY_PATTERN.test(key)]);
+      }
+    }
+  }
+  return false;
+}
+
 /**
  * Whether an item is a Short: a Shorts tile, a reel item, or anything that opens the Shorts player.
  */
@@ -122,6 +154,7 @@ function isShortsItem(item) {
 function shouldDropItem(item, flags) {
   if (flags.enableAdBlock && (hasAdRenderer(item) || isReelAd(item))) return true;
   if (flags.hideGuestSignInPrompts && isGuestPrompt(item)) return true;
+  if (flags.hideMembersOnly && hasMembersBadge(item)) return true;
   if (flags.removeGlobalShorts && isShortsItem(item)) return true;
   return !!flags.removeLiveVideos && isLiveItem(item);
 }

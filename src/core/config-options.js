@@ -199,6 +199,9 @@ export const configOptions = new Map([
   ['removeTopLiveGames', { default: false, desc: 'Remove Top Live Games' }],
   ['removeMostRelevant', { default: false, desc: 'Remove "Most Relevant" Shelf' }],
   ['removeNewsShelves', { default: true, desc: 'Remove News Shelves' }],
+  ['hideMembersOnly', { default: true, desc: 'Hide Members-only Videos' }],
+  ['hideGuideEntries', { default: true, desc: 'Hide Unwanted Guide Entries' }],
+  ['hideGuideTitles', { default: 'News, Sport, Movies & TV', desc: 'Guide entries to hide' }],
   ['enableRowsAhead', { default: true, desc: 'Load Rows Ahead' }],
   ['enableSponsorBlock', { default: true, desc: 'SponsorBlock' }],
   ['enableMutedSegments', { default: false, desc: 'Allow segments that mute audio' }],
@@ -244,7 +247,8 @@ export const configOptions = new Map([
   ['hideGuestSignInPrompts', { default: false, desc: 'Guest Mode: Hide Sign-in Buttons' }],
   ['forceHighResVideo', { default: false, desc: 'Force Max Quality' }],
   ['forceVideoCodec', { default: 'auto', desc: 'Force Video Codec' }],
-  ['disableNotifications', { default: false, desc: 'Disable Notifications' }]
+  ['disableNotifications', { default: false, desc: 'Disable Notifications' }],
+  ['hideVoiceButton', { default: true, desc: 'Hide Voice Search Button' }]
 ]);
 
 /** The configurable shortcut keys: the digits and the red, green and blue keys (ui/shortcuts/bindings.js). */
