@@ -141,7 +141,9 @@ function expectFocus(what, expected) {
   press(KEYS.DOWN);
   expectFocus('Down from the second column onto a full-width row', 'Force Max Quality');
   press(KEYS.UP);
-  expectFocus('Up from a full-width row prefers the nearer column', 'Remove Top Live Games');
+  expectFocus('Up from a full-width row lands on the odd last row', 'Remove News Shelves');
+  press(KEYS.UP);
+  expectFocus('Up from the odd last row rejoins the column above', 'Remove Top Live Games');
   press(KEYS.UP);
   press(KEYS.UP);
   expectFocus('Up twice more climbs the column', 'Ad Blocking');
