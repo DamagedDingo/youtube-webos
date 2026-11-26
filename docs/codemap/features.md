@@ -2,7 +2,7 @@
 
 Part of the [code map](../CODEMAP.md), generated from the source by `tools/codemap.mjs`: do not edit it by hand.
 
-Modules: [features/block-webos-cast-absent.js](#mod-block-webos-cast-absent-js), [features/block-webos-cast.ts](#mod-block-webos-cast-ts), [features/comments-fix.js](#mod-comments-fix-js), [features/lang-settings-fix.ts](#mod-lang-settings-fix-ts), [features/logo-style.js](#mod-logo-style-js), [features/playback-speed-absent.js](#mod-playback-speed-absent-js), [features/rows-ahead.js](#mod-rows-ahead-js)
+Modules: [features/block-webos-cast-absent.js](#mod-block-webos-cast-absent-js), [features/block-webos-cast.ts](#mod-block-webos-cast-ts), [features/comments-fix.js](#mod-comments-fix-js), [features/hide-guide-entries.js](#mod-hide-guide-entries-js), [features/lang-settings-fix.ts](#mod-lang-settings-fix-ts), [features/logo-style.js](#mod-logo-style-js), [features/playback-speed-absent.js](#mod-playback-speed-absent-js), [features/rows-ahead.js](#mod-rows-ahead-js)
 
 <a id="mod-block-webos-cast-absent-js"></a>
 
@@ -127,6 +127,58 @@ Scans at start-up and again every STARTUP_RETRY_MS until the rules are found or 
 - **Calls:** [applyFix](#fn-comments-fix-js-applyfix)
 - **Called by:** [at load](#mod-comments-fix-js)
 - **Browser:** `setTimeout`
+
+<a id="mod-hide-guide-entries-js"></a>
+
+## features/hide-guide-entries.js
+
+> The left-hand guide's entries, hidden in the DOM rather than in the response.
+>
+> The response filter (features/adblock/nav-filters.js) only reaches the guide when YouTube hands it over as JSON this script can intercept; on webOS 25 the guide arrives already rendered, so Shorts, News, Sport and Movies & TV stay in the rail. This walks the rendered entries and takes the named ones out, and keeps doing so while the guide re-renders (a launch, a sign-in, a tab change).
+
+90 lines · imports [core/config.js](core.md#mod-config-js), [core/log.js](core.md#mod-log-js) · imported by [userScript.js](app.md#mod-userscript-js)
+
+**At load:**
+
+- **Calls:** [core/log.js › createLogger](core.md#fn-log-js-createlogger)
+
+<a id="fn-hide-guide-entries-js-hiddentitles"></a>
+**`hiddenTitles()`** · function · L17–30
+
+The lower-cased titles the user asked to hide: the list, plus Shorts while that is hidden.
+
+- **Calls:** [core/config.js › configRead](core.md#fn-config-js-configread)
+- **Called by:** [prune](#fn-hide-guide-entries-js-prune)
+- **Settings:** reads `removeGlobalShorts`, `hideGuideEntries`, `hideGuideTitles`
+
+<a id="fn-hide-guide-entries-js-prune"></a>
+**`prune()`** · function · L36–50
+
+Takes the named guide entries out of the rail. The label is the entry's aria-label: the rail is icon-only, so that is where its name lives.
+
+- **Calls:** [core/config.js › configRead](core.md#fn-config-js-configread), [hiddenTitles](#fn-hide-guide-entries-js-hiddentitles)
+- **Called by:** [createScheduler](#fn-hide-guide-entries-js-createscheduler)
+- **Settings:** reads `enableAdBlock`
+- **Browser:** `querySelectorAll`
+
+<a id="fn-hide-guide-entries-js-createscheduler"></a>
+**`createScheduler()`** · function · L53–67
+
+Runs `prune` once per animation frame, however many mutations arrive.
+
+- **Calls:** [prune](#fn-hide-guide-entries-js-prune)
+- **Called by:** [initHideGuideEntries](#fn-hide-guide-entries-js-inithideguideentries)
+- **Browser:** `requestAnimationFrame`
+
+<a id="fn-hide-guide-entries-js-inithideguideentries"></a>
+**`initHideGuideEntries()`** · function, exported · L74–90
+
+Starts hiding the named guide entries and keeps hiding them: the guide is rebuilt on launch, sign-in and tab changes, and each rebuild brings the entries back.
+
+- **Calls:** [core/config.js › configAddChangeListener](core.md#fn-config-js-configaddchangelistener), [createScheduler](#fn-hide-guide-entries-js-createscheduler)
+- **Called by:** [userScript.js (at load)](app.md#mod-userscript-js)
+- **Settings:** uses `enableAdBlock`, `removeGlobalShorts`, `hideGuideEntries`, `hideGuideTitles`
+- **Browser:** `MutationObserver`
 
 <a id="mod-lang-settings-fix-ts"></a>
 

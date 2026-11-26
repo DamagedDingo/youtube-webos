@@ -21,7 +21,7 @@
   },
   {
    "path": "core/config-options.js",
-   "lines": 283,
+   "lines": 288,
    "header": "Every setting the app knows about, with its default and the label the options panel shows, plus the value tables the cycle controls choose from. An option's `upgrade(stored)` turns a value an older build stored into this build's (core/config.js applies it when the settings load).",
    "imports": [
     {
@@ -92,6 +92,7 @@
     "features/emoji-font/index.js",
     "features/emoji-font/observer.js",
     "features/force-codec/index.js",
+    "features/hide-guide-entries.js",
     "features/logo-style.js",
     "features/playback-speed/controller.js",
     "features/playback-speed/index.js",
@@ -309,7 +310,7 @@
   },
   {
    "path": "core/launch.js",
-   "lines": 120,
+   "lines": 121,
    "header": "Launch-URL handling, kept apart from the rest of core/.\n\nindex.js is the tiny bootstrap page that only redirects to youtube.com/tv, so these two functions live here rather than in core/dom.js or remote.js - importing those would drag their module-level side effects onto a page with no YouTube in it.",
    "imports": [
     {
@@ -364,6 +365,7 @@
     "features/dearrow/log.js",
     "features/emoji-font/log.js",
     "features/force-codec/log.js",
+    "features/hide-guide-entries.js",
     "features/lang-settings-fix.ts",
     "features/playback-speed/log.js",
     "features/return-dislike/index.js",
@@ -930,7 +932,7 @@
   },
   {
    "path": "features/adblock/constants.js",
-   "lines": 54,
+   "lines": 65,
    "header": "String tables shared by the adblock modules.",
    "imports": [],
    "importedBy": [
@@ -956,6 +958,10 @@
       "removeLiveVideos",
       "removeTopLiveGames",
       "removeMostRelevant",
+      "removeNewsShelves",
+      "hideGuideEntries",
+      "hideGuideTitles",
+      "hideMembersOnly",
       "hideGuestSignInPrompts",
       "enableLegacyEmojiFix",
       "hideEndcards",
@@ -1024,7 +1030,7 @@
   },
   {
    "path": "features/adblock/fallback.js",
-   "lines": 82,
+   "lines": 81,
    "header": "The fallback for a response no schema path matched, and the guide filter for the small guide response: one bounded search over the body serves both.",
    "imports": [
     {
@@ -1042,7 +1048,8 @@
     {
      "from": "features/adblock/nav-filters.js",
      "names": [
-      "filterNavLists"
+      "filterNavLists",
+      "anyNavFilter"
      ]
     },
     {
@@ -1082,7 +1089,7 @@
   },
   {
    "path": "features/adblock/flags.js",
-   "lines": 97,
+   "lines": 118,
    "header": "The filter switches as one mutable snapshot, refreshed when a setting changes rather than re-read on every JSON.parse.",
    "imports": [
     {
@@ -1129,6 +1136,7 @@
     }
    },
    "functions": [
+    "features/adblock/flags.js#parseGuideTitles",
     "features/adblock/flags.js#onFlagsChange",
     "features/adblock/flags.js#recomputeFilterFlags"
    ]
@@ -1151,7 +1159,7 @@
   },
   {
    "path": "features/adblock/item-filters.js",
-   "lines": 248,
+   "lines": 284,
    "header": "Shelves and the items in them: ads, Shorts, live streams and guest prompts, removed in place; a shelf that ends up empty goes with its items.",
    "imports": [
     {
@@ -1195,6 +1203,7 @@
     "features/adblock/item-filters.js#isReelAd",
     "features/adblock/item-filters.js#hasAdRenderer",
     "features/adblock/item-filters.js#isGuestPrompt",
+    "features/adblock/item-filters.js#hasMembersBadge",
     "features/adblock/item-filters.js#isShortsItem",
     "features/adblock/item-filters.js#shouldDropItem",
     "features/adblock/item-filters.js#anyContentCheck",
@@ -1241,8 +1250,8 @@
   },
   {
    "path": "features/adblock/nav-filters.js",
-   "lines": 66,
-   "header": "The left-hand guide and the tab bar: drops the Shorts and Live entries when those are hidden. fallback.js finds the guide in a response; BROWSE_TABS has it at a known path.",
+   "lines": 81,
+   "header": "The left-hand guide and the tab bar: drops the Shorts and Live entries, and any entry named in the hideGuideTitles list, when those are hidden. fallback.js finds the guide in a response; BROWSE_TABS has it at a known path.",
    "imports": [
     {
      "from": "features/adblock/constants.js",
@@ -1262,11 +1271,14 @@
     "features/adblock/response-filters.js"
    ],
    "exports": [
+    "anyNavFilter",
     "removeBlockedNavTabs",
     "filterNavLists"
    ],
    "atLoad": {},
    "functions": [
+    "features/adblock/nav-filters.js#getNavTitle",
+    "features/adblock/nav-filters.js#anyNavFilter",
     "features/adblock/nav-filters.js#isNavEntryBlocked",
     "features/adblock/nav-filters.js#removeBlockedNavTabs",
     "features/adblock/nav-filters.js#dropBlocked",
@@ -1427,7 +1439,7 @@
   },
   {
    "path": "features/adblock/response-filters.js",
-   "lines": 194,
+   "lines": 190,
    "header": "What gets removed from each response type, along the known schema paths; fallback.js handles the responses no path matched.",
    "imports": [
     {
@@ -2940,6 +2952,43 @@
    ],
    "atLoad": {},
    "functions": []
+  },
+  {
+   "path": "features/hide-guide-entries.js",
+   "lines": 90,
+   "header": "The left-hand guide's entries, hidden in the DOM rather than in the response.\n\nThe response filter (features/adblock/nav-filters.js) only reaches the guide when YouTube hands it over as JSON this script can intercept; on webOS 25 the guide arrives already rendered, so Shorts, News, Sport and Movies & TV stay in the rail. This walks the rendered entries and takes the named ones out, and keeps doing so while the guide re-renders (a launch, a sign-in, a tab change).",
+   "imports": [
+    {
+     "from": "core/config.js",
+     "names": [
+      "configRead",
+      "configAddChangeListener"
+     ]
+    },
+    {
+     "from": "core/log.js",
+     "names": [
+      "createLogger"
+     ]
+    }
+   ],
+   "importedBy": [
+    "userScript.js"
+   ],
+   "exports": [
+    "initHideGuideEntries"
+   ],
+   "atLoad": {
+    "calls": [
+     "core/log.js#createLogger"
+    ]
+   },
+   "functions": [
+    "features/hide-guide-entries.js#hiddenTitles",
+    "features/hide-guide-entries.js#prune",
+    "features/hide-guide-entries.js#createScheduler",
+    "features/hide-guide-entries.js#initHideGuideEntries"
+   ]
   },
   {
    "path": "features/lang-settings-fix.ts",
@@ -6703,7 +6752,7 @@
   },
   {
    "path": "ui/panel/pages.js",
-   "lines": 249,
+   "lines": 287,
    "header": "The five pages of the options panel. Each builder returns its page element; the panel appends it and decides when it is built (Main up front, the rest one per frame once the panel is on screen).",
    "imports": [
     {
@@ -6779,6 +6828,7 @@
    ],
    "exports": [
     "buildMainPage",
+    "buildFiltersPage",
     "buildSponsorPage",
     "buildDeArrowPage",
     "buildShortcutsPage",
@@ -6790,6 +6840,9 @@
     "ui/panel/pages.js#footNote",
     "ui/panel/pages.js#buildMainPage",
     "ui/panel/pages.js#buildMainPage.updateDependencyState",
+    "ui/panel/pages.js#buildFiltersPage",
+    "ui/panel/pages.js#buildFiltersPage.updateDependencyState",
+    "ui/panel/pages.js#buildFiltersPage.syncGuideNote",
     "ui/panel/pages.js#buildSponsorPage",
     "ui/panel/pages.js#buildDeArrowPage",
     "ui/panel/pages.js#buildDeArrowPage.sync",
@@ -6799,7 +6852,7 @@
   },
   {
    "path": "ui/panel/panel.js",
-   "lines": 296,
+   "lines": 298,
    "header": "The options panel: the container and its tab menu, showing and hiding it and keeping focus inside it.",
    "imports": [
     {
@@ -6854,6 +6907,7 @@
      "from": "ui/panel/pages.js",
      "names": [
       "buildMainPage",
+      "buildFiltersPage",
       "buildSponsorPage",
       "buildDeArrowPage",
       "buildShortcutsPage",
@@ -7513,7 +7567,7 @@
   },
   {
    "path": "ui/styles/html-classes.js",
-   "lines": 72,
+   "lines": 73,
    "header": "The state of the UI as classes on <html>: the theme, OLED-care mode and the UI tweaks, each driven by a setting. The stylesheets (global.css, the panel, the toasts, the clock's watch.css, theme-red.css, theme-oled.css) select on these classes, so a change of setting is one class toggle and no element is touched.\n\nOn documentElement rather than body: YouTube's leanback app rewrites body.className on tab navigation and panel dialogs and would wipe a body class.",
    "imports": [
     {
@@ -7555,6 +7609,7 @@
       "fixSearchFont",
       "removeBlackBorders",
       "uiTheme",
+      "hideVoiceButton",
       "enableOledCareMode",
       "videoShelfOpacity"
      ]
@@ -7623,7 +7678,7 @@
   },
   {
    "path": "userScript.js",
-   "lines": 92,
+   "lines": 94,
    "header": "The script webOS runs inside YouTube's TV site (built as webOSUserScripts/userScript.js). It loads every feature, installs the global hooks and handles launches and relaunches; the order of the imports below is the order things start in (docs/ARCHITECTURE.md).",
    "imports": [
     {
@@ -7708,6 +7763,12 @@
      ]
     },
     {
+     "from": "features/hide-guide-entries.js",
+     "names": [
+      "initHideGuideEntries"
+     ]
+    },
+    {
      "from": "ui/index.js",
      "names": []
     },
@@ -7758,6 +7819,7 @@
      "hooks/buffer-limit.js#installBufferLimit",
      "features/logo-style.js#initLogoStyle",
      "features/adblock/tracking-block.js#startTrackingBlock",
+     "features/hide-guide-entries.js#initHideGuideEntries",
      "core/launch.js#extractLaunchParams",
      "features/auto-login/whos-watching.js#attemptActiveBypass",
      "features/auto-login/whos-watching.js#resetActiveBypass",
@@ -8318,6 +8380,8 @@
     "features/dearrow/titles.js#formatTitle",
     "features/emoji-font/observer.js#manageObserverState",
     "features/force-codec/index.js#applyMode",
+    "features/hide-guide-entries.js#hiddenTitles",
+    "features/hide-guide-entries.js#prune",
     "features/logo-style.js#applyLogoStyle",
     "features/playback-speed/controller.js#createSpeedController.applyReload",
     "features/playback-speed/index.js#isOn",
@@ -8338,6 +8402,8 @@
     "ui/panel/controls/cycle-row.js#createOpacityControl.sync",
     "ui/panel/controls/cycle-row.js#createThumbnailQualityControl.sync",
     "ui/panel/pages.js#buildDeArrowPage.sync",
+    "ui/panel/pages.js#buildFiltersPage.syncGuideNote",
+    "ui/panel/pages.js#buildFiltersPage.updateDependencyState",
     "ui/panel/pages.js#buildMainPage.updateDependencyState",
     "ui/panel/panel.js#createHeading.toggleTheme",
     "ui/shortcuts/bindings.js#updateShortcutCache",
@@ -8392,6 +8458,7 @@
     "features/dearrow/index.js#(top level)",
     "features/emoji-font/index.js#(top level)",
     "features/force-codec/index.js#installCodecHooks",
+    "features/hide-guide-entries.js#initHideGuideEntries",
     "features/logo-style.js#initLogoStyle",
     "features/playback-speed/index.js#(top level)",
     "features/sponsorblock/index.js#SponsorBlockHandler.setupConfigListeners.listen",
@@ -8404,6 +8471,7 @@
     "ui/panel/controls/cycle-row.js#createOpacityControl",
     "ui/panel/controls/cycle-row.js#createThumbnailQualityControl",
     "ui/panel/pages.js#buildDeArrowPage",
+    "ui/panel/pages.js#buildFiltersPage",
     "ui/panel/pages.js#buildMainPage",
     "ui/shortcuts/bindings.js#(top level)",
     "ui/styles/html-classes.js#initHtmlClasses"
@@ -8779,7 +8847,7 @@
    ],
    "calledBy": [
     "features/auto-login/whos-watching.js#attemptActiveBypass",
-    "ui/panel/pages.js#buildMainPage"
+    "ui/panel/pages.js#buildFiltersPage"
    ]
   },
   {
@@ -8879,10 +8947,10 @@
    "params": "",
    "exported": false,
    "lines": [
-    50,
-    56
+    55,
+    59
    ],
-   "description": "The YouTube TV start URL, with the flags the app always sets (full animation, web speech, voice).",
+   "description": "The YouTube TV start URL, with the flag the app always sets (full animation).\n\nVoice and web speech are left off on purpose: YouTube's mic asks webOS for speech recognition, which means LG's terms dialog on every press, and that dialog cannot be cancelled from the remote (ui/styles/global.css also hides the button).",
    "calledBy": [
     "core/launch.js#handleLaunch"
    ]
@@ -8894,8 +8962,8 @@
    "params": "a, b",
    "exported": false,
    "lines": [
-    59,
-    64
+    62,
+    67
    ],
    "description": "Appends every parameter of `b` to `a`, keeping repeated keys, and returns `a`.",
    "calledBy": [
@@ -8909,8 +8977,8 @@
    "params": "candidate, expectedOrigin",
    "exported": false,
    "lines": [
-    67,
-    75
+    70,
+    78
    ],
    "description": "`candidate` as a URL when it parses and has `expectedOrigin`, else null.",
    "calledBy": [
@@ -8924,8 +8992,8 @@
    "params": "params",
    "exported": true,
    "lines": [
-    81,
-    120
+    84,
+    121
    ],
    "description": "Opens YouTube for a launch or relaunch: a deep link (video, search, voice intent from the remote or the system) becomes the URL the leanback app starts on.",
    "calls": [
@@ -8981,6 +9049,7 @@
     "features/dearrow/log.js#(top level)",
     "features/emoji-font/log.js#(top level)",
     "features/force-codec/log.js#(top level)",
+    "features/hide-guide-entries.js#(top level)",
     "features/lang-settings-fix.ts#(top level)",
     "features/playback-speed/log.js#(top level)",
     "features/return-dislike/index.js#ReturnYouTubeDislike.constructor",
@@ -12281,14 +12350,15 @@
    "id": "features/adblock/fallback.js#filterNavFound",
    "name": "filterNavFound",
    "kind": "function",
-   "params": "found, removeGlobalShorts, removeLiveVideos",
+   "params": "found, flags",
    "exported": false,
    "lines": [
     30,
-    44
+    43
    ],
    "description": "The guide lists in a findObjects() result, filtered.",
    "calls": [
+    "features/adblock/nav-filters.js#anyNavFilter",
     "features/adblock/nav-filters.js#filterNavLists"
    ],
    "calledBy": [
@@ -12300,11 +12370,11 @@
    "id": "features/adblock/fallback.js#removeBlockedNavEntries",
    "name": "removeBlockedNavEntries",
    "kind": "function",
-   "params": "data, removeGlobalShorts, removeLiveVideos",
+   "params": "data, flags",
    "exported": true,
    "lines": [
-    51,
-    54
+    50,
+    53
    ],
    "description": "The guide arrives in its own small response that matches no content schema: searched for the guide and tab renderers (bounded) and filtered. The known shape, BROWSE_TABS, goes through removeBlockedNavTabs instead.",
    "calls": [
@@ -12322,8 +12392,8 @@
    "params": "data, config",
    "exported": true,
    "lines": [
-    57,
-    82
+    56,
+    81
    ],
    "description": "A large body no schema path matched: the content and guide filters over whatever the search finds.",
    "calls": [
@@ -12340,14 +12410,29 @@
    ]
   },
   {
+   "id": "features/adblock/flags.js#parseGuideTitles",
+   "name": "parseGuideTitles",
+   "kind": "function",
+   "params": "value",
+   "exported": false,
+   "lines": [
+    48,
+    55
+   ],
+   "description": "'News, Sport' as ['news', 'sport']: trimmed, lower-cased, empties dropped; null when nothing is left.",
+   "calledBy": [
+    "features/adblock/flags.js#recomputeFilterFlags"
+   ]
+  },
+  {
    "id": "features/adblock/flags.js#onFlagsChange",
    "name": "onFlagsChange",
    "kind": "function",
    "params": "fn",
    "exported": true,
    "lines": [
-    46,
-    48
+    61,
+    63
    ],
    "description": "Calls `fn` whenever the flags were recomputed (a setting changed).",
    "calledBy": [
@@ -12361,12 +12446,13 @@
    "params": "",
    "exported": false,
    "lines": [
-    54,
-    92
+    69,
+    113
    ],
    "description": "Recomputes cfgFlags, cfgFlagsNoEmoji and filterState from the settings, then calls the onFlagsChange listeners. Runs at load and on every change of a key in CONFIG_KEYS.",
    "calls": [
-    "core/webos.js#getWebOSVersion"
+    "core/webos.js#getWebOSVersion",
+    "features/adblock/flags.js#parseGuideTitles"
    ],
    "settings": {
     "other": [
@@ -12376,6 +12462,10 @@
      "removeLiveVideos",
      "removeTopLiveGames",
      "removeMostRelevant",
+     "removeNewsShelves",
+     "hideMembersOnly",
+     "hideGuideEntries",
+     "hideGuideTitles",
      "hideGuestSignInPrompts",
      "enableLegacyEmojiFix",
      "hideEndcards",
@@ -12465,14 +12555,29 @@
    ]
   },
   {
+   "id": "features/adblock/item-filters.js#hasMembersBadge",
+   "name": "hasMembersBadge",
+   "kind": "function",
+   "params": "item",
+   "exported": false,
+   "lines": [
+    111,
+    127
+   ],
+   "description": "Whether an item carries the members-only (or members-first) badge.\n\nThe badge is text, not a badge style, and it sits somewhere under the tile's thumbnail overlays or its metadata rows, so the item is walked once, bounded, and only strings inside a badge/overlay/label subtree are tested: matching every string would drop a video whose title merely mentions memberships.",
+   "calledBy": [
+    "features/adblock/item-filters.js#shouldDropItem"
+   ]
+  },
+  {
    "id": "features/adblock/item-filters.js#isShortsItem",
    "name": "isShortsItem",
    "kind": "function",
    "params": "item",
    "exported": false,
    "lines": [
-    100,
-    115
+    132,
+    147
    ],
    "description": "Whether an item is a Short: a Shorts tile, a reel item, or anything that opens the Shorts player.",
    "calledBy": [
@@ -12486,12 +12591,13 @@
    "params": "item, flags",
    "exported": false,
    "lines": [
-    122,
-    127
+    154,
+    160
    ],
    "description": "Whether an item (a tile, a lockup, a nudge) goes under the flags: the one rule for items in a shelf, in a grid or continuation, and bare in a section list.",
    "calls": [
     "features/adblock/item-filters.js#hasAdRenderer",
+    "features/adblock/item-filters.js#hasMembersBadge",
     "features/adblock/item-filters.js#isGuestPrompt",
     "features/adblock/item-filters.js#isLiveItem",
     "features/adblock/item-filters.js#isReelAd",
@@ -12509,8 +12615,8 @@
    "params": "flags",
    "exported": false,
    "lines": [
-    133,
-    135
+    166,
+    168
    ],
    "description": "Whether any check applies to a shelf or to an item under the flags: every one of them counts only with Ad Blocking on (flags.js).",
    "calledBy": [
@@ -12525,10 +12631,10 @@
    "params": "shelf, flags",
    "exported": false,
    "lines": [
-    138,
-    150
+    171,
+    186
    ],
-   "description": "Whether a whole shelf goes under the flags: the Shorts shelf by type or title, the titled shelves.",
+   "description": "Whether a whole shelf goes under the flags: the Shorts shelf by type or title, the named shelves.",
    "calls": [
     "features/adblock/item-filters.js#getShelfTitle"
    ],
@@ -12543,8 +12649,8 @@
    "params": "list, pass",
    "exported": false,
    "lines": [
-    159,
-    163
+    195,
+    199
    ],
    "description": "One nested list filtered, counting the items it had in `pass.had` and the items left in `pass.left`. Declared once, with the pass's state as its argument, rather than as a closure for every shelf of every response. skipEmoji: the caller's wrapEmojiInTree(item) walks the whole section, nested items included.",
    "calls": [
@@ -12562,8 +12668,8 @@
    "params": "item, config, contextName, pass",
    "exported": false,
    "lines": [
-    175,
-    188
+    211,
+    224
    ],
    "description": "Filters a shelf's lists in place and says whether the shelf stays: not when its type or title is blocked, and not when the filtering emptied it. A shelf we emptied has to go with its items: left in place it still has a title and a content box, so the app renders the header plus a <ytlr-ghost-surface> of skeleton tiles and waits forever for content that was already removed (the \"Live now\" row of grey boxes). Only a shelf the filter emptied: one whose content uses some other renderer was never filtered here, and one that arrived with an empty list was not emptied here.",
    "calls": [
@@ -12583,8 +12689,8 @@
    "params": "contents, config, contextName, skipEmoji",
    "exported": true,
    "lines": [
-    191,
-    226
+    227,
+    262
    ],
    "description": "skipEmoji: see filterItems below.",
    "calls": [
@@ -12610,8 +12716,8 @@
    "params": "items, config, skipEmoji",
    "exported": true,
    "lines": [
-    230,
-    248
+    266,
+    284
    ],
    "description": "skipEmoji: set when the caller runs its own wrapEmojiInTree over an ancestor of these items, so each tile is walked once.",
    "calls": [
@@ -12626,16 +12732,51 @@
    ]
   },
   {
+   "id": "features/adblock/nav-filters.js#getNavTitle",
+   "name": "getNavTitle",
+   "kind": "function",
+   "params": "renderer",
+   "exported": false,
+   "lines": [
+    8,
+    17
+   ],
+   "description": "A nav entry's title as text: simpleText, the first run, the tab id, or a bare string.",
+   "calledBy": [
+    "features/adblock/nav-filters.js#isNavEntryBlocked"
+   ]
+  },
+  {
+   "id": "features/adblock/nav-filters.js#anyNavFilter",
+   "name": "anyNavFilter",
+   "kind": "function",
+   "params": "flags",
+   "exported": true,
+   "lines": [
+    20,
+    22
+   ],
+   "description": "Whether any guide or tab entry could be hidden at all: the gate before a search.",
+   "calledBy": [
+    "features/adblock/fallback.js#filterNavFound",
+    "features/adblock/nav-filters.js#filterNavLists",
+    "features/adblock/nav-filters.js#removeBlockedNavTabs"
+   ]
+  },
+  {
    "id": "features/adblock/nav-filters.js#isNavEntryBlocked",
    "name": "isNavEntryBlocked",
    "kind": "function",
-   "params": "entry, removeGlobalShorts, removeLiveVideos",
+   "params": "entry, flags",
    "exported": false,
    "lines": [
-    12,
-    35
+    30,
+    49
    ],
-   "description": "Whether a guide or tab entry is one being hidden: by its endpoint first (a reelWatchEndpoint or browseId FEshorts for Shorts, FEtopics_live for Live), then, for Shorts only, by its title.",
+   "description": "Whether a guide or tab entry is one being hidden: by its endpoint first (a reelWatchEndpoint or browseId FEshorts for Shorts, FEtopics_live for Live), then by title: Shorts when that is hidden, and any title in the hideGuideTitles list, compared lower-cased.",
+   "calls": [
+    "features/adblock/nav-filters.js#getNavTitle"
+   ],
    "calledBy": [
     "features/adblock/nav-filters.js#dropBlocked"
    ]
@@ -12644,14 +12785,15 @@
    "id": "features/adblock/nav-filters.js#removeBlockedNavTabs",
    "name": "removeBlockedNavTabs",
    "kind": "function",
-   "params": "nav, removeGlobalShorts, removeLiveVideos",
+   "params": "nav, flags",
    "exported": true,
    "lines": [
-    38,
-    41
+    52,
+    55
    ],
    "description": "The tab bar of a BROWSE_TABS response, at its known location: no search.",
    "calls": [
+    "features/adblock/nav-filters.js#anyNavFilter",
     "features/adblock/nav-filters.js#filterNavLists"
    ],
    "calledBy": [
@@ -12662,11 +12804,11 @@
    "id": "features/adblock/nav-filters.js#dropBlocked",
    "name": "dropBlocked",
    "kind": "function",
-   "params": "list, removeGlobalShorts, removeLiveVideos",
+   "params": "list, flags",
    "exported": false,
    "lines": [
-    44,
-    52
+    58,
+    66
    ],
    "description": "Drops the blocked entries of one list in place.",
    "calls": [
@@ -12680,14 +12822,15 @@
    "id": "features/adblock/nav-filters.js#filterNavLists",
    "name": "filterNavLists",
    "kind": "function",
-   "params": "lists, removeGlobalShorts, removeLiveVideos",
+   "params": "lists, flags",
    "exported": true,
    "lines": [
-    55,
-    66
+    69,
+    81
    ],
    "description": "Drops blocked entries from each list, and from each section's own tabs or items.",
    "calls": [
+    "features/adblock/nav-filters.js#anyNavFilter",
     "features/adblock/nav-filters.js#dropBlocked"
    ],
    "calledBy": [
@@ -12972,7 +13115,7 @@
    "exported": false,
    "lines": [
     45,
-    61
+    57
    ],
    "description": "Removes the Shorts and Live tabs from a browse response's tab bar, then filters every tab's sections.",
    "calls": [
@@ -12988,8 +13131,8 @@
    "params": "data, schema, config",
    "exported": false,
    "lines": [
-    67,
-    82
+    63,
+    78
    ],
    "description": "Filters every list shape a continuation (the next rows or items of a page) can arrive in, and wraps its emoji once at the end when the emoji fix is on.",
    "calls": [
@@ -13009,8 +13152,8 @@
    "params": "data, config",
    "exported": false,
    "lines": [
-    85,
-    93
+    81,
+    89
    ],
    "description": "The received actions and endpoints: a body can carry both.",
    "calls": [
@@ -13029,8 +13172,8 @@
    "params": "data, schema, responseType",
    "exported": false,
    "lines": [
-    101,
-    110
+    97,
+    106
    ],
    "description": "The QR-code prompt in the player overlay, found along the path, or on NEXT by search when the path misses. A player response is parsed at every video start and keeps its overlay at the path; a search over it would be a walk of the whole streaming data for nothing.",
    "calls": [
@@ -13048,8 +13191,8 @@
    "params": "data, schema, config, responseType, skipEmoji",
    "exported": false,
    "lines": [
-    113,
-    123
+    109,
+    119
    ],
    "description": "The pivot (guest prompts) section list, found along the path or by search.",
    "calls": [
@@ -13067,8 +13210,8 @@
    "params": "data, schema, config, responseType",
    "exported": false,
    "lines": [
-    126,
-    145
+    122,
+    141
    ],
    "description": "PLAYER and NEXT: player ads, the QR-code prompt, endcards, guest prompts and the legacy emoji fix.",
    "calls": [
@@ -13087,8 +13230,8 @@
    "params": "data, responseType, config",
    "exported": true,
    "lines": [
-    166,
-    180
+    162,
+    176
    ],
    "description": "Runs the filter registered for `responseType`, plus the continuation and received-actions filters when the response carries those beside its main content.",
    "calls": [
@@ -13106,8 +13249,8 @@
    "params": "actions, config, skipEmoji",
    "exported": true,
    "lines": [
-    183,
-    194
+    179,
+    190
    ],
    "description": "The continuation items carried by received actions or endpoints, filtered.",
    "calls": [
@@ -15550,6 +15693,109 @@
    "description": "The live mode, or null when nothing is narrowed: for tests/unit/force-codec-test.cjs.",
    "calls": [
     "features/force-codec/codecs.js#narrowing"
+   ]
+  },
+  {
+   "id": "features/hide-guide-entries.js#hiddenTitles",
+   "name": "hiddenTitles",
+   "kind": "function",
+   "params": "",
+   "exported": false,
+   "lines": [
+    17,
+    30
+   ],
+   "description": "The lower-cased titles the user asked to hide: the list, plus Shorts while that is hidden.",
+   "calls": [
+    "core/config.js#configRead"
+   ],
+   "settings": {
+    "read": [
+     "removeGlobalShorts",
+     "hideGuideEntries",
+     "hideGuideTitles"
+    ]
+   },
+   "calledBy": [
+    "features/hide-guide-entries.js#prune"
+   ]
+  },
+  {
+   "id": "features/hide-guide-entries.js#prune",
+   "name": "prune",
+   "kind": "function",
+   "params": "",
+   "exported": false,
+   "lines": [
+    36,
+    50
+   ],
+   "description": "Takes the named guide entries out of the rail. The label is the entry's aria-label: the rail is icon-only, so that is where its name lives.",
+   "calls": [
+    "core/config.js#configRead",
+    "features/hide-guide-entries.js#hiddenTitles"
+   ],
+   "settings": {
+    "read": [
+     "enableAdBlock"
+    ]
+   },
+   "browser": [
+    "querySelectorAll"
+   ],
+   "calledBy": [
+    "features/hide-guide-entries.js#createScheduler"
+   ]
+  },
+  {
+   "id": "features/hide-guide-entries.js#createScheduler",
+   "name": "createScheduler",
+   "kind": "function",
+   "params": "",
+   "exported": false,
+   "lines": [
+    53,
+    67
+   ],
+   "description": "Runs `prune` once per animation frame, however many mutations arrive.",
+   "calls": [
+    "features/hide-guide-entries.js#prune"
+   ],
+   "browser": [
+    "requestAnimationFrame"
+   ],
+   "calledBy": [
+    "features/hide-guide-entries.js#initHideGuideEntries"
+   ]
+  },
+  {
+   "id": "features/hide-guide-entries.js#initHideGuideEntries",
+   "name": "initHideGuideEntries",
+   "kind": "function",
+   "params": "",
+   "exported": true,
+   "lines": [
+    74,
+    90
+   ],
+   "description": "Starts hiding the named guide entries and keeps hiding them: the guide is rebuilt on launch, sign-in and tab changes, and each rebuild brings the entries back.",
+   "calls": [
+    "core/config.js#configAddChangeListener",
+    "features/hide-guide-entries.js#createScheduler"
+   ],
+   "settings": {
+    "other": [
+     "enableAdBlock",
+     "removeGlobalShorts",
+     "hideGuideEntries",
+     "hideGuideTitles"
+    ]
+   },
+   "browser": [
+    "MutationObserver"
+   ],
+   "calledBy": [
+    "userScript.js#(top level)"
    ]
   },
   {
@@ -22332,6 +22578,7 @@
     "ui/panel/controls/cycle-row.js#createControlRow.arrow",
     "ui/panel/controls/section.js#createSection",
     "ui/panel/pages.js#buildDeArrowPage",
+    "ui/panel/pages.js#buildFiltersPage",
     "ui/panel/pages.js#buildMainPage",
     "ui/panel/pages.js#buildShortcutsPage",
     "ui/panel/pages.js#buildSponsorPage",
@@ -22405,6 +22652,7 @@
    ],
    "calledBy": [
     "ui/panel/pages.js#buildDeArrowPage",
+    "ui/panel/pages.js#buildFiltersPage",
     "ui/panel/pages.js#buildMainPage",
     "ui/panel/pages.js#buildSponsorPage",
     "ui/panel/pages.js#buildUITweaksPage"
@@ -22428,6 +22676,7 @@
     "ui/panel/controls/cycle-row.js#createOpacityControl.sync",
     "ui/panel/controls/cycle-row.js#createThumbnailQualityControl.sync",
     "ui/panel/pages.js#buildDeArrowPage.sync",
+    "ui/panel/pages.js#buildFiltersPage.updateDependencyState",
     "ui/panel/pages.js#buildMainPage.updateDependencyState"
    ]
   },
@@ -22937,6 +23186,7 @@
    ],
    "calledBy": [
     "ui/panel/pages.js#buildDeArrowPage",
+    "ui/panel/pages.js#buildFiltersPage",
     "ui/panel/pages.js#buildMainPage",
     "ui/panel/pages.js#buildUITweaksPage"
    ]
@@ -23425,6 +23675,7 @@
    ],
    "calledBy": [
     "ui/panel/pages.js#buildDeArrowPage",
+    "ui/panel/pages.js#buildFiltersPage",
     "ui/panel/pages.js#buildUITweaksPage"
    ]
   },
@@ -23454,13 +23705,12 @@
    "params": "",
    "exported": true,
    "lines": [
-    44,
-    100
+    45,
+    90
    ],
-   "description": "The Main page: Cosmetic Filtering (Ad Blocking and the filters that depend on it, greyed out while it is off), then the other features.",
+   "description": "The Main page: Ad Blocking and Tracking Block (the switches the other filters ride on), then the player and interface settings. Everything that only hides something lives on the Filters page.",
    "calls": [
     "core/config.js#configAddChangeListener",
-    "core/guest-mode.js#isGuestMode",
     "ui/dom.js#createElement",
     "ui/panel/controls/checkbox.js#createConfigCheckbox",
     "ui/panel/controls/cycle-row.js#createChoiceControl",
@@ -23476,11 +23726,6 @@
     ],
     "other": [
      "enableTrackingBlock",
-     "removeGlobalShorts",
-     "removeLiveVideos",
-     "removeTopLiveGames",
-     "removeMostRelevant",
-     "hideGuestSignInPrompts",
      "forceHighResVideo",
      "hideEndcards",
      "enableReturnYouTubeDislike",
@@ -23488,7 +23733,8 @@
      "upgradeThumbnails",
      "showWatch",
      "enableOledCareMode",
-     "disableNotifications"
+     "disableNotifications",
+     "hideVoiceButton"
     ]
    }
   },
@@ -23499,8 +23745,8 @@
    "params": "",
    "exported": false,
    "lines": [
-    70,
-    75
+    59,
+    64
    ],
    "description": "Greys out the rows that depend on Ad Blocking while it is off.",
    "calls": [
@@ -23517,14 +23763,99 @@
    ]
   },
   {
+   "id": "ui/panel/pages.js#buildFiltersPage",
+   "name": "buildFiltersPage",
+   "kind": "function",
+   "params": "",
+   "exported": true,
+   "lines": [
+    98,
+    138
+   ],
+   "description": "The Filters page: everything that only removes something from YouTube's own UI. All of it rides on Ad Blocking (Main), so the rows are greyed out while that is off.",
+   "calls": [
+    "core/config.js#configAddChangeListener",
+    "core/guest-mode.js#isGuestMode",
+    "ui/dom.js#createElement",
+    "ui/panel/controls/checkbox.js#createConfigCheckbox",
+    "ui/panel/controls/section.js#createSection",
+    "ui/panel/pages.js#buildFiltersPage.syncGuideNote",
+    "ui/panel/pages.js#buildFiltersPage.updateDependencyState",
+    "ui/panel/pages.js#helpLine"
+   ],
+   "settings": {
+    "listen": [
+     "enableAdBlock",
+     "hideGuideTitles"
+    ],
+    "other": [
+     "removeGlobalShorts",
+     "removeLiveVideos",
+     "removeTopLiveGames",
+     "removeMostRelevant",
+     "removeNewsShelves",
+     "hideMembersOnly",
+     "hideGuideEntries",
+     "hideGuestSignInPrompts"
+    ]
+   }
+  },
+  {
+   "id": "ui/panel/pages.js#buildFiltersPage.updateDependencyState",
+   "name": "buildFiltersPage.updateDependencyState",
+   "kind": "arrow",
+   "params": "",
+   "exported": false,
+   "lines": [
+    118,
+    123
+   ],
+   "description": "Greys out every row while Ad Blocking (Main) is off.",
+   "calls": [
+    "core/config.js#configRead",
+    "ui/panel/controls/checkbox.js#setUnavailable"
+   ],
+   "settings": {
+    "read": [
+     "enableAdBlock"
+    ]
+   },
+   "calledBy": [
+    "ui/panel/pages.js#buildFiltersPage"
+   ]
+  },
+  {
+   "id": "ui/panel/pages.js#buildFiltersPage.syncGuideNote",
+   "name": "buildFiltersPage.syncGuideNote",
+   "kind": "arrow",
+   "params": "",
+   "exported": false,
+   "lines": [
+    131,
+    133
+   ],
+   "description": "Rewrites the note under the guide switch with the current title list.",
+   "calls": [
+    "core/config.js#configRead"
+   ],
+   "settings": {
+    "read": [
+     "hideGuideTitles"
+    ]
+   },
+   "calledBy": [
+    "ui/panel/pages.js#buildFiltersPage"
+   ]
+  },
+  {
    "id": "ui/panel/pages.js#buildSponsorPage",
    "name": "buildSponsorPage",
    "kind": "function",
    "params": "",
    "exported": true,
    "lines": [
-    104,
-    135
+    142,
+    173
    ],
    "description": "The SponsorBlock page: the switch, one row per category, and the SponsorBlock options.",
    "calls": [
@@ -23560,8 +23891,8 @@
    "params": "",
    "exported": true,
    "lines": [
-    143,
-    186
+    181,
+    224
    ],
    "description": "The DeArrow page: the switch and the logo, then the title and thumbnail options, greyed out while it is off (and the thumbnail fallback while crowdsourced thumbnails are). Title formatting is in the webOS 22+ build only (features/dearrow/titles.js): the legacy one gets no formatting rows.",
    "calls": [
@@ -23595,8 +23926,8 @@
    "params": "",
    "exported": false,
    "lines": [
-    174,
-    181
+    212,
+    219
    ],
    "description": "Greys out the rows while DeArrow is off, and the fallback while crowdsourced thumbnails are.",
    "calls": [
@@ -23620,8 +23951,8 @@
    "params": "",
    "exported": true,
    "lines": [
-    190,
-    200
+    228,
+    238
    ],
    "description": "The Shortcuts page: one row per configurable key.",
    "calls": [
@@ -23636,8 +23967,8 @@
    "params": "",
    "exported": true,
    "lines": [
-    207,
-    249
+    245,
+    287
    ],
    "description": "The UI Tweaks page: shelf opacity, previews, titles, rows ahead, Liquid Glass, the theme, the emoji fix on webOS 3/4, and playback speed where the TV can (webOS 23 and newer).",
    "calls": [
@@ -23670,8 +24001,8 @@
    "params": "pages, container",
    "exported": false,
    "lines": [
-    42,
-    71
+    44,
+    73
    ],
    "description": "The pages, built lazily into `container`: `elements[i]` is page i once built, `ensure(i)` builds it now, `startDeferred()` builds the rest one per animation frame. A builder never runs twice.",
    "calledBy": [
@@ -23685,8 +24016,8 @@
    "params": "index",
    "exported": false,
    "lines": [
-    47,
-    53
+    49,
+    55
    ],
    "description": "Builds page `index` now, if it is not built yet, and adds it to the panel.",
    "calledBy": [
@@ -23700,8 +24031,8 @@
    "params": "",
    "exported": false,
    "lines": [
-    58,
-    69
+    60,
+    71
    ],
    "description": "Builds the pages not built yet, one per animation frame, so opening the panel does not wait for all of them.",
    "calls": [
@@ -23718,8 +24049,8 @@
    "params": "",
    "exported": false,
    "lines": [
-    62,
-    67
+    64,
+    69
    ],
    "description": "Builds the next unbuilt page and asks for another frame.",
    "calls": [
@@ -23739,8 +24070,8 @@
    "params": "pages, onPick, activeIndex",
    "exported": false,
    "lines": [
-    78,
-    103
+    80,
+    105
    ],
    "description": "The tab bar: a button per page, the first one active; `onPick(index)` on a click, and the pointer leaving the bar puts focus back on the open tab (`activeIndex()`). Returns the bar and its buttons.",
    "calls": [
@@ -23757,8 +24088,8 @@
    "params": "",
    "exported": true,
    "lines": [
-    112,
-    114
+    114,
+    116
    ],
    "description": "Whether the options panel is currently shown.",
    "calledBy": [
@@ -23773,8 +24104,8 @@
    "params": "afterToggle",
    "exported": false,
    "lines": [
-    122,
-    153
+    124,
+    155
    ],
    "description": "The heading with the logo. A logo click (a Magic Remote pointer affordance; the logo is not in the focus order) flips the theme and hands focus back through `afterToggle`; the UI Theme row on the UI Tweaks page is the key path. There is one drawn logo per look (blue, red, dark): the <html> theme classes pick the one shown (panel.css, theme-red.css, theme-oled.css). A CSS filter on the blue image came out orange for red and too bright for OLED.",
    "calls": [
@@ -23792,8 +24123,8 @@
    "params": "",
    "exported": false,
    "lines": [
-    124,
-    129
+    126,
+    131
    ],
    "description": "Switches to the next UI theme (a click on the logo).",
    "calls": [
@@ -23816,8 +24147,8 @@
    "params": "src, variant",
    "exported": false,
    "lines": [
-    134,
-    141
+    136,
+    143
    ],
    "description": "One of the heading's logos (one per theme; CSS shows the current one); a click switches the theme.",
    "calls": [
@@ -23834,8 +24165,8 @@
    "params": "",
    "exported": false,
    "lines": [
-    159,
-    237
+    161,
+    239
    ],
    "description": "Builds the options panel: heading, tab bar, the Main page (the others are built later), the keyboard handler and the focus trap. Returns the element and its controls.",
    "calls": [
@@ -23859,8 +24190,8 @@
    "params": "",
    "exported": false,
    "lines": [
-    172,
-    172
+    174,
+    174
    ],
    "description": "Shows the SponsorBlock segment popup beside the panel while its page is open on a watch page.",
    "calls": [
@@ -23877,8 +24208,8 @@
    "params": "pageIndex",
    "exported": false,
    "lines": [
-    178,
-    196
+    180,
+    198
    ],
    "description": "Shows page `pageIndex` (building it first if needed), marks its tab, and moves the focus into it unless the user is on the tab bar.",
    "calls": [
@@ -23896,8 +24227,8 @@
    "params": "",
    "exported": false,
    "lines": [
-    231,
-    231
+    233,
+    233
    ],
    "description": "The tab button of the open page."
   },
@@ -23908,8 +24239,8 @@
    "params": "visible",
    "exported": true,
    "lines": [
-    243,
-    289
+    245,
+    291
    ],
    "description": "Opens (building it the first time) or closes the options panel, with its keyboard handler, focus trap and popup. Toggles are ignored for 500 ms after the first build.",
    "calls": [
@@ -23931,8 +24262,8 @@
    "params": "",
    "exported": false,
    "lines": [
-    296,
-    296
+    298,
+    298
    ],
    "description": "Test hook: whether the panel takes toggles again (the first build's 500 ms block is over)."
   },
@@ -24761,8 +25092,8 @@
    "params": "keys",
    "exported": false,
    "lines": [
-    31,
-    35
+    32,
+    36
    ],
    "description": "The current values of `keys`, as an object.",
    "calls": [
@@ -24779,8 +25110,8 @@
    "params": "",
    "exported": false,
    "lines": [
-    43,
-    53
+    44,
+    54
    ],
    "description": "The shelf backdrop's opacity, written as a rule of its own rather than a custom property: Chromium 38 (webOS 3) has no var(). Written only while OLED-care mode is on: the rule selects on html.ytaf-oled, so without the mode it would be a stylesheet for nothing.",
    "calls": [
@@ -24803,8 +25134,8 @@
    "params": "",
    "exported": true,
    "lines": [
-    59,
-    72
+    60,
+    73
    ],
    "description": "Sets every class of HTML_CLASSES on <html> from its settings and keeps it in step, and writes the OLED shelf opacity rule.",
    "calls": [
@@ -24830,8 +25161,8 @@
    "params": "",
    "exported": false,
    "lines": [
-    63,
-    63
+    64,
+    64
    ],
    "description": "Sets or removes one class from the current values of its settings.",
    "calls": [
@@ -27592,13 +27923,17 @@
    "other": [
     "dev/perf-mon.js#(top level)",
     "features/adblock/constants.js#(top level)",
-    "features/adblock/flags.js#recomputeFilterFlags"
-   ],
-   "listen": [
-    "ui/panel/pages.js#buildMainPage"
+    "features/adblock/flags.js#recomputeFilterFlags",
+    "features/hide-guide-entries.js#initHideGuideEntries"
    ],
    "read": [
+    "features/hide-guide-entries.js#prune",
+    "ui/panel/pages.js#buildFiltersPage.updateDependencyState",
     "ui/panel/pages.js#buildMainPage.updateDependencyState"
+   ],
+   "listen": [
+    "ui/panel/pages.js#buildFiltersPage",
+    "ui/panel/pages.js#buildMainPage"
    ]
   },
   "enableTrackingBlock": {
@@ -27766,7 +28101,11 @@
     "dev/perf-mon.js#(top level)",
     "features/adblock/constants.js#(top level)",
     "features/adblock/flags.js#recomputeFilterFlags",
-    "ui/panel/pages.js#buildMainPage"
+    "features/hide-guide-entries.js#initHideGuideEntries",
+    "ui/panel/pages.js#buildFiltersPage"
+   ],
+   "read": [
+    "features/hide-guide-entries.js#hiddenTitles"
    ]
   },
   "removeLiveVideos": {
@@ -27775,7 +28114,7 @@
    "other": [
     "features/adblock/constants.js#(top level)",
     "features/adblock/flags.js#recomputeFilterFlags",
-    "ui/panel/pages.js#buildMainPage"
+    "ui/panel/pages.js#buildFiltersPage"
    ]
   },
   "removeTopLiveGames": {
@@ -27785,7 +28124,7 @@
     "dev/perf-mon.js#(top level)",
     "features/adblock/constants.js#(top level)",
     "features/adblock/flags.js#recomputeFilterFlags",
-    "ui/panel/pages.js#buildMainPage"
+    "ui/panel/pages.js#buildFiltersPage"
    ]
   },
   "removeMostRelevant": {
@@ -27795,7 +28134,54 @@
     "dev/perf-mon.js#(top level)",
     "features/adblock/constants.js#(top level)",
     "features/adblock/flags.js#recomputeFilterFlags",
-    "ui/panel/pages.js#buildMainPage"
+    "ui/panel/pages.js#buildFiltersPage"
+   ]
+  },
+  "removeNewsShelves": {
+   "label": "Remove News Shelves",
+   "default": true,
+   "other": [
+    "features/adblock/constants.js#(top level)",
+    "features/adblock/flags.js#recomputeFilterFlags",
+    "ui/panel/pages.js#buildFiltersPage"
+   ]
+  },
+  "hideMembersOnly": {
+   "label": "Hide Members-only Videos",
+   "default": true,
+   "other": [
+    "features/adblock/constants.js#(top level)",
+    "features/adblock/flags.js#recomputeFilterFlags",
+    "ui/panel/pages.js#buildFiltersPage"
+   ]
+  },
+  "hideGuideEntries": {
+   "label": "Hide Unwanted Guide Entries",
+   "default": true,
+   "other": [
+    "features/adblock/constants.js#(top level)",
+    "features/adblock/flags.js#recomputeFilterFlags",
+    "features/hide-guide-entries.js#initHideGuideEntries",
+    "ui/panel/pages.js#buildFiltersPage"
+   ],
+   "read": [
+    "features/hide-guide-entries.js#hiddenTitles"
+   ]
+  },
+  "hideGuideTitles": {
+   "label": "Guide entries to hide",
+   "default": "News, Sport, Movies & TV",
+   "other": [
+    "features/adblock/constants.js#(top level)",
+    "features/adblock/flags.js#recomputeFilterFlags",
+    "features/hide-guide-entries.js#initHideGuideEntries"
+   ],
+   "read": [
+    "features/hide-guide-entries.js#hiddenTitles",
+    "ui/panel/pages.js#buildFiltersPage.syncGuideNote"
+   ],
+   "listen": [
+    "ui/panel/pages.js#buildFiltersPage"
    ]
   },
   "enableRowsAhead": {
@@ -28083,7 +28469,7 @@
     "dev/perf-mon.js#(top level)",
     "features/adblock/constants.js#(top level)",
     "features/adblock/flags.js#recomputeFilterFlags",
-    "ui/panel/pages.js#buildMainPage"
+    "ui/panel/pages.js#buildFiltersPage"
    ]
   },
   "forceHighResVideo": {
@@ -28123,6 +28509,14 @@
    ],
    "read": [
     "ui/toast/index.js#showNotification"
+   ]
+  },
+  "hideVoiceButton": {
+   "label": "Hide Voice Search Button",
+   "default": true,
+   "other": [
+    "ui/panel/pages.js#buildMainPage",
+    "ui/styles/html-classes.js#(top level)"
    ]
   },
   "shortcut_key_*": {

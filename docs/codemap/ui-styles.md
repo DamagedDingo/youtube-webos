@@ -12,14 +12,14 @@ Modules: [ui/styles/html-classes.js](#mod-html-classes-js)
 >
 > On documentElement rather than body: YouTube's leanback app rewrites body.className on tab navigation and panel dialogs and would wipe a body class.
 
-72 lines · imports [core/config.js](core.md#mod-config-js), [core/dom.js](core.md#mod-dom-js) · imported by [ui/index.js](ui.md#mod-index-js)
+73 lines · imports [core/config.js](core.md#mod-config-js), [core/dom.js](core.md#mod-dom-js) · imported by [ui/index.js](ui.md#mod-index-js)
 
 **At load:**
 
-- **Settings:** uses `fixMultilineTitles`, `fixSearchFont`, `removeBlackBorders`, `uiTheme`, `enableOledCareMode`, `videoShelfOpacity`
+- **Settings:** uses `fixMultilineTitles`, `fixSearchFont`, `removeBlackBorders`, `uiTheme`, `hideVoiceButton`, `enableOledCareMode`, `videoShelfOpacity`
 
 <a id="fn-html-classes-js-read"></a>
-**`read(keys)`** · arrow · L31–35
+**`read(keys)`** · arrow · L32–36
 
 The current values of `keys`, as an object.
 
@@ -27,7 +27,7 @@ The current values of `keys`, as an object.
 - **Called by:** [initHtmlClasses.sync](#fn-html-classes-js-inithtmlclasses-sync)
 
 <a id="fn-html-classes-js-syncoledshelfopacity"></a>
-**`syncOledShelfOpacity()`** · function · L43–53
+**`syncOledShelfOpacity()`** · function · L44–54
 
 The shelf backdrop's opacity, written as a rule of its own rather than a custom property: Chromium 38 (webOS 3) has no var(). Written only while OLED-care mode is on: the rule selects on html.ytaf-oled, so without the mode it would be a stylesheet for nothing.
 
@@ -36,7 +36,7 @@ The shelf backdrop's opacity, written as a rule of its own rather than a custom 
 - **Settings:** reads `enableOledCareMode`, `videoShelfOpacity`
 
 <a id="fn-html-classes-js-inithtmlclasses"></a>
-**`initHtmlClasses()`** · function, exported · L59–72
+**`initHtmlClasses()`** · function, exported · L60–73
 
 Sets every class of HTML_CLASSES on &lt;html> from its settings and keeps it in step, and writes the OLED shelf opacity rule.
 
@@ -45,7 +45,7 @@ Sets every class of HTML_CLASSES on &lt;html> from its settings and keeps it in 
 - **Settings:** listens to `enableOledCareMode`, `videoShelfOpacity`
 
 <a id="fn-html-classes-js-inithtmlclasses-sync"></a>
-**`initHtmlClasses.sync()`** · arrow · L63–63
+**`initHtmlClasses.sync()`** · arrow · L64–64
 
 Sets or removes one class from the current values of its settings.
 

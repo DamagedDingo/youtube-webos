@@ -10,11 +10,11 @@ Modules: [features/adblock/constants.js](#mod-constants-js), [features/adblock/e
 
 > String tables shared by the adblock modules.
 
-54 lines · imported by [features/adblock/flags.js](#mod-flags-js), [features/adblock/item-filters.js](#mod-item-filters-js), [features/adblock/nav-filters.js](#mod-nav-filters-js), [features/adblock/parse-hook.js](#mod-parse-hook-js), [features/adblock/tracking-block.js](#mod-tracking-block-js)
+65 lines · imported by [features/adblock/flags.js](#mod-flags-js), [features/adblock/item-filters.js](#mod-item-filters-js), [features/adblock/nav-filters.js](#mod-nav-filters-js), [features/adblock/parse-hook.js](#mod-parse-hook-js), [features/adblock/tracking-block.js](#mod-tracking-block-js)
 
 **At load:**
 
-- **Settings:** uses `enableAdBlock`, `enableTrackingBlock`, `removeGlobalShorts`, `removeLiveVideos`, `removeTopLiveGames`, `removeMostRelevant`, `hideGuestSignInPrompts`, `enableLegacyEmojiFix`, `hideEndcards`, `upgradeThumbnails`, `enableRowsAhead`, `enableDeArrow`
+- **Settings:** uses `enableAdBlock`, `enableTrackingBlock`, `removeGlobalShorts`, `removeLiveVideos`, `removeTopLiveGames`, `removeMostRelevant`, `removeNewsShelves`, `hideGuideEntries`, `hideGuideTitles`, `hideMembersOnly`, `hideGuestSignInPrompts`, `enableLegacyEmojiFix`, `hideEndcards`, `upgradeThumbnails`, `enableRowsAhead`, `enableDeArrow`
 
 <a id="mod-emoji-wrap-absent-js"></a>
 
@@ -126,18 +126,18 @@ The depth is a plain argument: a default value would cost an `arguments` read pe
 
 > The fallback for a response no schema path matched, and the guide filter for the small guide response: one bounded search over the body serves both.
 
-82 lines · imports [features/adblock/log.js](#mod-log-js), [features/adblock/search.js](#mod-search-js), [features/adblock/nav-filters.js](#mod-nav-filters-js), [features/adblock/item-filters.js](#mod-item-filters-js), [features/adblock/player-filters.js](#mod-player-filters-js), [features/adblock/response-filters.js](#mod-response-filters-js) · imported by [features/adblock/parse-hook.js](#mod-parse-hook-js)
+81 lines · imports [features/adblock/log.js](#mod-log-js), [features/adblock/search.js](#mod-search-js), [features/adblock/nav-filters.js](#mod-nav-filters-js), [features/adblock/item-filters.js](#mod-item-filters-js), [features/adblock/player-filters.js](#mod-player-filters-js), [features/adblock/response-filters.js](#mod-response-filters-js) · imported by [features/adblock/parse-hook.js](#mod-parse-hook-js)
 
 <a id="fn-fallback-js-filternavfound"></a>
-**`filterNavFound(found, removeGlobalShorts, removeLiveVideos)`** · function · L30–44
+**`filterNavFound(found, flags)`** · function · L30–43
 
 The guide lists in a findObjects() result, filtered.
 
-- **Calls:** [features/adblock/nav-filters.js › filterNavLists](#fn-nav-filters-js-filternavlists)
+- **Calls:** [features/adblock/nav-filters.js › anyNavFilter](#fn-nav-filters-js-anynavfilter), [features/adblock/nav-filters.js › filterNavLists](#fn-nav-filters-js-filternavlists)
 - **Called by:** [applyFallbackFilters](#fn-fallback-js-applyfallbackfilters), [removeBlockedNavEntries](#fn-fallback-js-removeblockednaventries)
 
 <a id="fn-fallback-js-removeblockednaventries"></a>
-**`removeBlockedNavEntries(data, removeGlobalShorts, removeLiveVideos)`** · function, exported · L51–54
+**`removeBlockedNavEntries(data, flags)`** · function, exported · L50–53
 
 The guide arrives in its own small response that matches no content schema: searched for the guide and tab renderers (bounded) and filtered. The known shape, BROWSE_TABS, goes through removeBlockedNavTabs instead.
 
@@ -145,7 +145,7 @@ The guide arrives in its own small response that matches no content schema: sear
 - **Called by:** [features/adblock/parse-hook.js › filterResponse](#fn-parse-hook-js-filterresponse)
 
 <a id="fn-fallback-js-applyfallbackfilters"></a>
-**`applyFallbackFilters(data, config)`** · function, exported · L57–82
+**`applyFallbackFilters(data, config)`** · function, exported · L56–81
 
 A large body no schema path matched: the content and guide filters over whatever the search finds.
 
@@ -158,28 +158,35 @@ A large body no schema path matched: the content and guide filters over whatever
 
 > The filter switches as one mutable snapshot, refreshed when a setting changes rather than re-read on every JSON.parse.
 
-97 lines · imports [core/config.js](core.md#mod-config-js), [core/webos.js](core.md#mod-webos-js), [features/adblock/constants.js](#mod-constants-js) · imported by [features/adblock/parse-hook.js](#mod-parse-hook-js), [features/adblock/stringify-hook.ts](#mod-stringify-hook-ts), [features/adblock/tracking-block.js](#mod-tracking-block-js)
+118 lines · imports [core/config.js](core.md#mod-config-js), [core/webos.js](core.md#mod-webos-js), [features/adblock/constants.js](#mod-constants-js) · imported by [features/adblock/parse-hook.js](#mod-parse-hook-js), [features/adblock/stringify-hook.ts](#mod-stringify-hook-ts), [features/adblock/tracking-block.js](#mod-tracking-block-js)
 
 **At load:**
 
 - **Calls:** [core/config.js › configGetAll](core.md#fn-config-js-configgetall), [recomputeFilterFlags](#fn-flags-js-recomputefilterflags), [core/config.js › configAddChangeListener](core.md#fn-config-js-configaddchangelistener)
 - **Settings:** uses `(all)`
 
+<a id="fn-flags-js-parseguidetitles"></a>
+**`parseGuideTitles(value)`** · function · L48–55
+
+'News, Sport' as ['news', 'sport']: trimmed, lower-cased, empties dropped; null when nothing is left.
+
+- **Called by:** [recomputeFilterFlags](#fn-flags-js-recomputefilterflags)
+
 <a id="fn-flags-js-onflagschange"></a>
-**`onFlagsChange(fn)`** · function, exported · L46–48
+**`onFlagsChange(fn)`** · function, exported · L61–63
 
 Calls `fn` whenever the flags were recomputed (a setting changed).
 
 - **Called by:** [features/adblock/tracking-block.js › startTrackingBlock](#fn-tracking-block-js-starttrackingblock)
 
 <a id="fn-flags-js-recomputefilterflags"></a>
-**`recomputeFilterFlags()`** · function · L54–92
+**`recomputeFilterFlags()`** · function · L69–113
 
 Recomputes cfgFlags, cfgFlagsNoEmoji and filterState from the settings, then calls the onFlagsChange listeners. Runs at load and on every change of a key in CONFIG_KEYS.
 
-- **Calls:** [core/webos.js › getWebOSVersion](core.md#fn-webos-js-getwebosversion)
+- **Calls:** [core/webos.js › getWebOSVersion](core.md#fn-webos-js-getwebosversion), [parseGuideTitles](#fn-flags-js-parseguidetitles)
 - **Called by:** [at load](#mod-flags-js)
-- **Settings:** uses `enableAdBlock`, `enableTrackingBlock`, `removeGlobalShorts`, `removeLiveVideos`, `removeTopLiveGames`, `removeMostRelevant`, `hideGuestSignInPrompts`, `enableLegacyEmojiFix`, `hideEndcards`, `upgradeThumbnails`, `enableDeArrow`, `enableRowsAhead`
+- **Settings:** uses `enableAdBlock`, `enableTrackingBlock`, `removeGlobalShorts`, `removeLiveVideos`, `removeTopLiveGames`, `removeMostRelevant`, `removeNewsShelves`, `hideMembersOnly`, `hideGuideEntries`, `hideGuideTitles`, `hideGuestSignInPrompts`, `enableLegacyEmojiFix`, `hideEndcards`, `upgradeThumbnails`, `enableDeArrow`, `enableRowsAhead`
 
 <a id="mod-index-js"></a>
 
@@ -195,7 +202,7 @@ Recomputes cfgFlags, cfgFlagsNoEmoji and filterState from the settings, then cal
 
 > Shelves and the items in them: ads, Shorts, live streams and guest prompts, removed in place; a shelf that ends up empty goes with its items.
 
-248 lines · imports [features/adblock/constants.js](#mod-constants-js), [features/adblock/emoji-wrap.js](#mod-emoji-wrap-js), [core/innertube.js](core.md#mod-innertube-js), [features/adblock/log.js](#mod-log-js) · imported by [features/adblock/fallback.js](#mod-fallback-js), [features/adblock/response-filters.js](#mod-response-filters-js)
+284 lines · imports [features/adblock/constants.js](#mod-constants-js), [features/adblock/emoji-wrap.js](#mod-emoji-wrap-js), [core/innertube.js](core.md#mod-innertube-js), [features/adblock/log.js](#mod-log-js) · imported by [features/adblock/fallback.js](#mod-fallback-js), [features/adblock/response-filters.js](#mod-response-filters-js)
 
 <a id="fn-item-filters-js-getshelftitle"></a>
 **`getShelfTitle(shelf)`** · function · L9–17
@@ -238,38 +245,47 @@ Whether an item is one of the sign-in nudges shown to guests.
 
 - **Called by:** [shouldDropItem](#fn-item-filters-js-shoulddropitem)
 
+<a id="fn-item-filters-js-hasmembersbadge"></a>
+**`hasMembersBadge(item)`** · function · L111–127
+
+Whether an item carries the members-only (or members-first) badge.
+
+The badge is text, not a badge style, and it sits somewhere under the tile's thumbnail overlays or its metadata rows, so the item is walked once, bounded, and only strings inside a badge/overlay/label subtree are tested: matching every string would drop a video whose title merely mentions memberships.
+
+- **Called by:** [shouldDropItem](#fn-item-filters-js-shoulddropitem)
+
 <a id="fn-item-filters-js-isshortsitem"></a>
-**`isShortsItem(item)`** · function · L100–115
+**`isShortsItem(item)`** · function · L132–147
 
 Whether an item is a Short: a Shorts tile, a reel item, or anything that opens the Shorts player.
 
 - **Called by:** [shouldDropItem](#fn-item-filters-js-shoulddropitem)
 
 <a id="fn-item-filters-js-shoulddropitem"></a>
-**`shouldDropItem(item, flags)`** · function · L122–127
+**`shouldDropItem(item, flags)`** · function · L154–160
 
 Whether an item (a tile, a lockup, a nudge) goes under the flags: the one rule for items in a shelf, in a grid or continuation, and bare in a section list.
 
-- **Calls:** [hasAdRenderer](#fn-item-filters-js-hasadrenderer), [isGuestPrompt](#fn-item-filters-js-isguestprompt), [isLiveItem](#fn-item-filters-js-isliveitem), [isReelAd](#fn-item-filters-js-isreelad), [isShortsItem](#fn-item-filters-js-isshortsitem)
+- **Calls:** [hasAdRenderer](#fn-item-filters-js-hasadrenderer), [hasMembersBadge](#fn-item-filters-js-hasmembersbadge), [isGuestPrompt](#fn-item-filters-js-isguestprompt), [isLiveItem](#fn-item-filters-js-isliveitem), [isReelAd](#fn-item-filters-js-isreelad), [isShortsItem](#fn-item-filters-js-isshortsitem)
 - **Called by:** [filterItems](#fn-item-filters-js-filteritems), [filterSectionList](#fn-item-filters-js-filtersectionlist)
 
 <a id="fn-item-filters-js-anycontentcheck"></a>
-**`anyContentCheck(flags)`** · function · L133–135
+**`anyContentCheck(flags)`** · function · L166–168
 
 Whether any check applies to a shelf or to an item under the flags: every one of them counts only with Ad Blocking on (flags.js).
 
 - **Called by:** [filterItems](#fn-item-filters-js-filteritems), [filterSectionList](#fn-item-filters-js-filtersectionlist)
 
 <a id="fn-item-filters-js-shoulddropshelf"></a>
-**`shouldDropShelf(shelf, flags)`** · function · L138–150
+**`shouldDropShelf(shelf, flags)`** · function · L171–186
 
-Whether a whole shelf goes under the flags: the Shorts shelf by type or title, the titled shelves.
+Whether a whole shelf goes under the flags: the Shorts shelf by type or title, the named shelves.
 
 - **Calls:** [getShelfTitle](#fn-item-filters-js-getshelftitle)
 - **Called by:** [shelfSurvives](#fn-item-filters-js-shelfsurvives)
 
 <a id="fn-item-filters-js-filternestedlist"></a>
-**`filterNestedList(list, pass)`** · function · L159–163
+**`filterNestedList(list, pass)`** · function · L195–199
 
 One nested list filtered, counting the items it had in `pass.had` and the items left in `pass.left`. Declared once, with the pass's state as its argument, rather than as a closure for every shelf of every response. skipEmoji: the caller's wrapEmojiInTree(item) walks the whole section, nested items included.
 
@@ -277,7 +293,7 @@ One nested list filtered, counting the items it had in `pass.had` and the items 
 - **Called by:** [filterSectionList](#fn-item-filters-js-filtersectionlist), [shelfSurvives](#fn-item-filters-js-shelfsurvives)
 
 <a id="fn-item-filters-js-shelfsurvives"></a>
-**`shelfSurvives(item, config, contextName, pass)`** · function · L175–188
+**`shelfSurvives(item, config, contextName, pass)`** · function · L211–224
 
 Filters a shelf's lists in place and says whether the shelf stays: not when its type or title is blocked, and not when the filtering emptied it. A shelf we emptied has to go with its items: left in place it still has a title and a content box, so the app renders the header plus a &lt;ytlr-ghost-surface> of skeleton tiles and waits forever for content that was already removed (the "Live now" row of grey boxes). Only a shelf the filter emptied: one whose content uses some other renderer was never filtered here, and one that arrived with an empty list was not emptied here.
 
@@ -285,7 +301,7 @@ Filters a shelf's lists in place and says whether the shelf stays: not when its 
 - **Called by:** [filterSectionList](#fn-item-filters-js-filtersectionlist)
 
 <a id="fn-item-filters-js-filtersectionlist"></a>
-**`filterSectionList(contents, config, contextName, skipEmoji)`** · function, exported · L191–226
+**`filterSectionList(contents, config, contextName, skipEmoji)`** · function, exported · L227–262
 
 skipEmoji: see filterItems below.
 
@@ -293,7 +309,7 @@ skipEmoji: see filterItems below.
 - **Called by:** [features/adblock/fallback.js › applyFallbackFilters](#fn-fallback-js-applyfallbackfilters), [features/adblock/response-filters.js › filterBrowseTabs](#fn-response-filters-js-filterbrowsetabs), [features/adblock/response-filters.js › filterContinuation](#fn-response-filters-js-filtercontinuation), [features/adblock/response-filters.js › filterMainContent](#fn-response-filters-js-filtermaincontent), [features/adblock/response-filters.js › filterPivot](#fn-response-filters-js-filterpivot)
 
 <a id="fn-item-filters-js-filteritems"></a>
-**`filterItems(items, config, skipEmoji)`** · function, exported · L230–248
+**`filterItems(items, config, skipEmoji)`** · function, exported · L266–284
 
 skipEmoji: set when the caller runs its own wrapEmojiInTree over an ancestor of these items, so each tile is walked once.
 
@@ -316,27 +332,42 @@ skipEmoji: set when the caller runs its own wrapEmojiInTree over an ancestor of 
 
 ## features/adblock/nav-filters.js
 
-> The left-hand guide and the tab bar: drops the Shorts and Live entries when those are hidden. fallback.js finds the guide in a response; BROWSE_TABS has it at a known path.
+> The left-hand guide and the tab bar: drops the Shorts and Live entries, and any entry named in the hideGuideTitles list, when those are hidden. fallback.js finds the guide in a response; BROWSE_TABS has it at a known path.
 
-66 lines · imports [features/adblock/constants.js](#mod-constants-js), [features/adblock/log.js](#mod-log-js) · imported by [features/adblock/fallback.js](#mod-fallback-js), [features/adblock/response-filters.js](#mod-response-filters-js)
+81 lines · imports [features/adblock/constants.js](#mod-constants-js), [features/adblock/log.js](#mod-log-js) · imported by [features/adblock/fallback.js](#mod-fallback-js), [features/adblock/response-filters.js](#mod-response-filters-js)
+
+<a id="fn-nav-filters-js-getnavtitle"></a>
+**`getNavTitle(renderer)`** · function · L8–17
+
+A nav entry's title as text: simpleText, the first run, the tab id, or a bare string.
+
+- **Called by:** [isNavEntryBlocked](#fn-nav-filters-js-isnaventryblocked)
+
+<a id="fn-nav-filters-js-anynavfilter"></a>
+**`anyNavFilter(flags)`** · function, exported · L20–22
+
+Whether any guide or tab entry could be hidden at all: the gate before a search.
+
+- **Called by:** [features/adblock/fallback.js › filterNavFound](#fn-fallback-js-filternavfound), [filterNavLists](#fn-nav-filters-js-filternavlists), [removeBlockedNavTabs](#fn-nav-filters-js-removeblockednavtabs)
 
 <a id="fn-nav-filters-js-isnaventryblocked"></a>
-**`isNavEntryBlocked(entry, removeGlobalShorts, removeLiveVideos)`** · function · L12–35
+**`isNavEntryBlocked(entry, flags)`** · function · L30–49
 
-Whether a guide or tab entry is one being hidden: by its endpoint first (a reelWatchEndpoint or browseId FEshorts for Shorts, FEtopics_live for Live), then, for Shorts only, by its title.
+Whether a guide or tab entry is one being hidden: by its endpoint first (a reelWatchEndpoint or browseId FEshorts for Shorts, FEtopics_live for Live), then by title: Shorts when that is hidden, and any title in the hideGuideTitles list, compared lower-cased.
 
+- **Calls:** [getNavTitle](#fn-nav-filters-js-getnavtitle)
 - **Called by:** [dropBlocked](#fn-nav-filters-js-dropblocked)
 
 <a id="fn-nav-filters-js-removeblockednavtabs"></a>
-**`removeBlockedNavTabs(nav, removeGlobalShorts, removeLiveVideos)`** · function, exported · L38–41
+**`removeBlockedNavTabs(nav, flags)`** · function, exported · L52–55
 
 The tab bar of a BROWSE_TABS response, at its known location: no search.
 
-- **Calls:** [filterNavLists](#fn-nav-filters-js-filternavlists)
+- **Calls:** [anyNavFilter](#fn-nav-filters-js-anynavfilter), [filterNavLists](#fn-nav-filters-js-filternavlists)
 - **Called by:** [features/adblock/response-filters.js › filterBrowseTabs](#fn-response-filters-js-filterbrowsetabs)
 
 <a id="fn-nav-filters-js-dropblocked"></a>
-**`dropBlocked(list, removeGlobalShorts, removeLiveVideos)`** · function · L44–52
+**`dropBlocked(list, flags)`** · function · L58–66
 
 Drops the blocked entries of one list in place.
 
@@ -344,11 +375,11 @@ Drops the blocked entries of one list in place.
 - **Called by:** [filterNavLists](#fn-nav-filters-js-filternavlists)
 
 <a id="fn-nav-filters-js-filternavlists"></a>
-**`filterNavLists(lists, removeGlobalShorts, removeLiveVideos)`** · function, exported · L55–66
+**`filterNavLists(lists, flags)`** · function, exported · L69–81
 
 Drops blocked entries from each list, and from each section's own tabs or items.
 
-- **Calls:** [dropBlocked](#fn-nav-filters-js-dropblocked)
+- **Calls:** [anyNavFilter](#fn-nav-filters-js-anynavfilter), [dropBlocked](#fn-nav-filters-js-dropblocked)
 - **Called by:** [features/adblock/fallback.js › filterNavFound](#fn-fallback-js-filternavfound), [removeBlockedNavTabs](#fn-nav-filters-js-removeblockednavtabs)
 
 <a id="mod-parse-hook-js"></a>
@@ -458,7 +489,7 @@ Empties the ad placements, player ads and ad slots of a player response and drop
 
 > What gets removed from each response type, along the known schema paths; fallback.js handles the responses no path matched.
 
-194 lines · imports [core/innertube.js](core.md#mod-innertube-js), [features/adblock/search.js](#mod-search-js), [features/adblock/emoji-wrap.js](#mod-emoji-wrap-js), [features/adblock/nav-filters.js](#mod-nav-filters-js), [features/adblock/item-filters.js](#mod-item-filters-js), [features/adblock/player-filters.js](#mod-player-filters-js), [features/adblock/log.js](#mod-log-js) · imported by [features/adblock/fallback.js](#mod-fallback-js), [features/adblock/parse-hook.js](#mod-parse-hook-js)
+190 lines · imports [core/innertube.js](core.md#mod-innertube-js), [features/adblock/search.js](#mod-search-js), [features/adblock/emoji-wrap.js](#mod-emoji-wrap-js), [features/adblock/nav-filters.js](#mod-nav-filters-js), [features/adblock/item-filters.js](#mod-item-filters-js), [features/adblock/player-filters.js](#mod-player-filters-js), [features/adblock/log.js](#mod-log-js) · imported by [features/adblock/fallback.js](#mod-fallback-js), [features/adblock/parse-hook.js](#mod-parse-hook-js)
 
 **At load:**
 
@@ -495,14 +526,14 @@ Filters the ads out of the Shorts player's sequence of upcoming Shorts.
 - **Calls:** [core/innertube.js › getByPath](core.md#fn-innertube-js-getbypath), [filterList](#fn-response-filters-js-filterlist)
 
 <a id="fn-response-filters-js-filterbrowsetabs"></a>
-**`filterBrowseTabs(data, schema, config)`** · function · L45–61
+**`filterBrowseTabs(data, schema, config)`** · function · L45–57
 
 Removes the Shorts and Live tabs from a browse response's tab bar, then filters every tab's sections.
 
 - **Calls:** [core/innertube.js › getByPath](core.md#fn-innertube-js-getbypath), [features/adblock/item-filters.js › filterSectionList](#fn-item-filters-js-filtersectionlist), [features/adblock/nav-filters.js › removeBlockedNavTabs](#fn-nav-filters-js-removeblockednavtabs)
 
 <a id="fn-response-filters-js-filtercontinuation"></a>
-**`filterContinuation(data, schema, config)`** · function · L67–82
+**`filterContinuation(data, schema, config)`** · function · L63–78
 
 Filters every list shape a continuation (the next rows or items of a page) can arrive in, and wraps its emoji once at the end when the emoji fix is on.
 
@@ -510,7 +541,7 @@ Filters every list shape a continuation (the next rows or items of a page) can a
 - **Called by:** [applySchemaFilters](#fn-response-filters-js-applyschemafilters)
 
 <a id="fn-response-filters-js-filteractions"></a>
-**`filterActions(data, config)`** · function · L85–93
+**`filterActions(data, config)`** · function · L81–89
 
 The received actions and endpoints: a body can carry both.
 
@@ -518,7 +549,7 @@ The received actions and endpoints: a body can carry both.
 - **Called by:** [at load](#mod-response-filters-js), [applySchemaFilters](#fn-response-filters-js-applyschemafilters)
 
 <a id="fn-response-filters-js-removetimelyactions"></a>
-**`removeTimelyActions(data, schema, responseType)`** · function · L101–110
+**`removeTimelyActions(data, schema, responseType)`** · function · L97–106
 
 The QR-code prompt in the player overlay, found along the path, or on NEXT by search when the path misses. A player response is parsed at every video start and keeps its overlay at the path; a search over it would be a walk of the whole streaming data for nothing.
 
@@ -526,7 +557,7 @@ The QR-code prompt in the player overlay, found along the path, or on NEXT by se
 - **Called by:** [filterWatchResponse](#fn-response-filters-js-filterwatchresponse)
 
 <a id="fn-response-filters-js-filterpivot"></a>
-**`filterPivot(data, schema, config, responseType, skipEmoji)`** · function · L113–123
+**`filterPivot(data, schema, config, responseType, skipEmoji)`** · function · L109–119
 
 The pivot (guest prompts) section list, found along the path or by search.
 
@@ -534,14 +565,14 @@ The pivot (guest prompts) section list, found along the path or by search.
 - **Called by:** [filterWatchResponse](#fn-response-filters-js-filterwatchresponse)
 
 <a id="fn-response-filters-js-filterwatchresponse"></a>
-**`filterWatchResponse(data, schema, config, responseType)`** · function · L126–145
+**`filterWatchResponse(data, schema, config, responseType)`** · function · L122–141
 
 PLAYER and NEXT: player ads, the QR-code prompt, endcards, guest prompts and the legacy emoji fix.
 
 - **Calls:** [core/innertube.js › getByPath](core.md#fn-innertube-js-getbypath), [features/adblock/emoji-wrap.js › wrapEmojiInTree](#fn-emoji-wrap-js-wrapemojiintree), [features/adblock/player-filters.js › removeEndcards](#fn-player-filters-js-removeendcards), [features/adblock/player-filters.js › removePlayerAds](#fn-player-filters-js-removeplayerads), [filterPivot](#fn-response-filters-js-filterpivot), [removeTimelyActions](#fn-response-filters-js-removetimelyactions)
 
 <a id="fn-response-filters-js-applyschemafilters"></a>
-**`applySchemaFilters(data, responseType, config)`** · function, exported · L166–180
+**`applySchemaFilters(data, responseType, config)`** · function, exported · L162–176
 
 Runs the filter registered for `responseType`, plus the continuation and received-actions filters when the response carries those beside its main content.
 
@@ -549,7 +580,7 @@ Runs the filter registered for `responseType`, plus the continuation and receive
 - **Called by:** [features/adblock/parse-hook.js › filterResponse](#fn-parse-hook-js-filterresponse)
 
 <a id="fn-response-filters-js-processactions"></a>
-**`processActions(actions, config, skipEmoji)`** · function, exported · L183–194
+**`processActions(actions, config, skipEmoji)`** · function, exported · L179–190
 
 The continuation items carried by received actions or endpoints, filtered.
 

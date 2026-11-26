@@ -127,6 +127,7 @@ export function buildFiltersPage() {
   // The guide titles are a list, not a switch: shown so it is clear what the
   // guide switch is hiding.
   const guideNote = helpLine('');
+  /** Rewrites the note under the guide switch with the current title list. */
   const syncGuideNote = () => {
     guideNote.textContent = `Guide entries hidden: ${configRead('hideGuideTitles') || 'none'}`;
   };
