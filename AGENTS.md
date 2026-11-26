@@ -86,6 +86,11 @@ npm test                    # format, lint, types, codemap, legacy + modern buil
   when more than one agent is working, and delete `node_modules/.cache/run-all-timings.json` after an
   aborted run, or the poisoned timings keep the budgets at the floor.
 - A single suite: `node tests/run-all.mjs --only=<name> --jobs=1`.
+- **A green `npm test` on this laptop proves little while another agent is building.** The full parallel
+  run dies at the 30 s floor (30.2-30.5 s, no assertion failure) while `--jobs=1` and per-group `--only=`
+  runs of the same tree are clean. Prefer those, and let CI (`main.yml`) own the full parallel run: it
+  takes about 70 s on a runner, and `smoke/perf-mon-test` runs there in 8.2 s. A 30 s death for that
+  suite here is load, not a code failure.
 - `npm run codemap` after touching a module; `npm run codemap:check` is part of `npm test`.
 
 ## Commits
@@ -100,7 +105,41 @@ Co-authored-by: Hermes Agent <agent@nousresearch.com>
 
 One owner at a time, claimed as above.
 
+**Versioning.** A fork release is the next patch above the upstream release it contains: upstream 0.8.5
+plus these fork commits is 0.8.6, tagged `v0.8.6`. Fork-only test builds keep a build number
+(`v0.8.5-b2`), are pre-releases, and are produced by `auto-discussion.yml`; they are never a release.
+
+**Size budget.** The legacy (webOS 3-6) bundle budget is **250 KiB** (`tests/smoke/bundle-check.cjs`),
+raised from 240 KiB in 0.8.6 because the Filters work ships to both flavours and the legacy bundle landed
+at 247,287 bytes.
+
 1. Build both bundles and package each: legacy → `youtube.leanback.v4_<version>_all.ipk`,
    `build:modern` → `youtube.leanback.v4_<version>_all_webOS22+.ipk`.
-2. Tag `v<version>` (or `v<version>-<suffix>` for a fork-only build) and attach **both** ipks.
-3. Regenerate `repo.json` with the asset URLs and their SHA-256s, and commit it.
+2. Create the release **as a draft** on tag `v<version>` (or `v<version>-<suffix>`) with both ipks
+   attached. Assets on a published release are a one-way door, so they must be there before it is visible.
+3. Publish the draft (`gh release edit v<version> --draft=false`). `build_repo.yml` runs on
+   `release: published`, regenerates `repo.json` from the published asset URLs and their SHA-256s, and
+   commits it to `main`. Watch it happen: `gh run list --limit 5`.
+4. Verify like a consumer: download both `ipkUrl`s from the committed `repo.json` and match their SHA-256s.
+5. If no run appears, `gh workflow run build_repo.yml --ref main` and repeat step 4. A release is not done
+   until `repo.json` on `main` names it.
+
+**Never replace an `.ipk` on a published release.** `repo.json` records its SHA-256 and Homebrew Channel
+verifies it: a rebuilt asset leaves a stale hash and installs fail. A rebuild is a new version and a new
+release.
+
+**`release.yml` is disabled on this fork** (`gh workflow list --all` shows `disabled_manually`). Its tag
+trigger builds only the legacy bundle and uploads with `allowUpdates: true`, so it would overwrite both
+assets of a release after `build_repo.yml` hashed them. Leave it disabled until it builds both flavours;
+publishing a release is the only path that produces assets here.
+
+**Events do start workflows now, but the flag does not tell you.** From the fork's creation until
+2026-11-26 09:30 UTC, pushes, PRs, tags and releases produced no run at all while `workflow_dispatch`
+worked, and `GET /repos/{owner}/{repo}/actions/permissions` still said `enabled: true`.
+`PUT /repos/{owner}/{repo}/actions/permissions -F enabled=true` fixed it. After any push or release,
+check `gh run list` rather than assuming, and never use the `enabled` flag as evidence that events work.
+
+**`.github/workflows/**` cannot be pushed with the `gh` OAuth token on this machine.** It lacks the
+`workflow` scope: `git push` is refused with "refusing to allow an OAuth App to create or update workflow
+… without `workflow` scope" and the contents API answers 404. Run `gh auth refresh -s workflow` before
+changing a workflow file.
