@@ -135,7 +135,8 @@ jobs:
           set -euo pipefail
           # A draft is not visible to consumers and build_repo.yml only runs on
           # `release: published`, so nothing has hashed this release yet.
-          gh release delete "$TAG" --yes
+          # This step runs before any checkout, so name the repo explicitly.
+          gh release delete "$TAG" -R "$GITHUB_REPOSITORY" --yes
           echo "Deleted the stale draft for $TAG; the tag itself is untouched."
 
       - name: Checkout the tag
@@ -295,6 +296,8 @@ jobs:
       # Only a `recatalogue=true` run on an already-published tag reaches this:
       # the assets are final, so they are downloaded rather than rebuilt, purely
       # so the check below can compare repo.json against the real bytes.
+      # Nothing has been checked out on this path, so every gh call names the
+      # repository explicitly - gh cannot infer it from a cwd that is not a repo.
       - name: Fetch the published assets for the catalogue check
         if: steps.state.outputs.state == 'published'
         env:
@@ -302,7 +305,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p release-assets
-          gh release download "$TAG" --pattern '*.ipk' --dir release-assets
+          gh release download "$TAG" -R "$GITHUB_REPOSITORY" --pattern '*.ipk' --dir release-assets
           count="$(ls -1 release-assets/*.ipk | wc -l)"
           if [ "$count" -ne 2 ]; then
             echo "::error::$TAG carries $count ipk assets, expected 2"
@@ -324,10 +327,10 @@ jobs:
           # build_repo.yml's concurrency group serialises it against a run the
           # release event may start when a human publishes by hand meanwhile.
           started="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          gh workflow run build_repo.yml --ref main
+          gh workflow run build_repo.yml -R "$GITHUB_REPOSITORY" --ref main
           run_id=""
           for _ in $(seq 1 24); do
-            run_id="$(gh run list --workflow build_repo.yml --event workflow_dispatch --limit 10 \
+            run_id="$(gh run list -R "$GITHUB_REPOSITORY" --workflow build_repo.yml --event workflow_dispatch --limit 10 \
               --json databaseId,createdAt \
               --jq "[.[] | select(.createdAt >= \"$started\")][0].databaseId // empty")"
             if [ -n "$run_id" ]; then break; fi
