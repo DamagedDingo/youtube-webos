@@ -1,0 +1,23 @@
+name: ZZ Dispatch Probe
+
+# Throwaway: proves that a workflow can start another workflow with
+# GITHUB_TOKEN via `gh workflow run` (workflow_dispatch), which release.yml
+# depends on because a token-raised `release: published` event starts nothing.
+on:
+  push:
+    branches: [agent/dispatch-probe]
+
+permissions:
+  actions: write
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch build_repo.yml with GITHUB_TOKEN
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh workflow run build_repo.yml -R "${{ github.repository }}" --ref main
+          echo "dispatched at $(date -u +%Y-%m-%dT%H:%M:%SZ)"
