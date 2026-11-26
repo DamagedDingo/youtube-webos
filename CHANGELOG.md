@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.8.7] - 2026/11/26
+
+The 0.8.6 legacy ipk (webOS 3 to 6) left the app dead: the new guide module walked
+a NodeList with `for...of`, and the downlevelled helper throws "Invalid attempt to
+iterate non-iterable instance" on Chromium 38, taking the whole user script with it.
+The same module also deleted guide entries from a virtualised list, which lost the
+Settings entry from the expanded rail while the collapsed rail showed News and Sport
+again. Both are fixed here; the modern 0.8.6 build was usable but had the same rail
+bug.
+
+## Fixed
+
++ Guide entries are hidden with `data-ytaf-guide-hidden` and a CSS rule instead of being removed, so the expanded and collapsed rails agree and Settings stays
++ The guide module walks DOM collections by index, so it runs on webOS 3 to 6 again
++ The guide module's mutation observer compares tag names instead of querying selectors, which it was doing on every rendered tile
++ The settings tabs are addressed by label in three behaviour suites, which the new Filters tab had shifted
+
 ## [0.8.6] - 2026/11/26
 
 The fork's first release of its own, built from upstream 0.8.5 plus six
