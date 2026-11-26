@@ -13,16 +13,16 @@
       "iconUri": "https://raw.githubusercontent.com/DamagedDingo/youtube-webos/main/assets/icon.png",
       "manifest": {
         "id": "youtube.leanback.v4",
-        "version": "0.8.7",
+        "version": "0.8.6",
         "type": "web",
         "title": "YouTube AdFree",
         "appDescription": "YouTube AdFree",
         "iconUri": "https://raw.githubusercontent.com/DamagedDingo/youtube-webos/main/assets/icon.png",
         "sourceUrl": "https://github.com/DamagedDingo/youtube-webos",
         "rootRequired": false,
-        "ipkUrl": "https://github.com/DamagedDingo/youtube-webos/releases/download/v0.8.7/youtube.leanback.v4_0.8.7_all.ipk",
+        "ipkUrl": "https://github.com/DamagedDingo/youtube-webos/releases/download/v0.8.6/youtube.leanback.v4_0.8.6_all.ipk",
         "ipkHash": {
-          "sha256": "220002689093b06a3272c9f694eb0b09815e2e14d8fd3dd51388e1b4122899b1"
+          "sha256": "ec51c30d95ab9abd78de3fc87fb1748519a35cda0f7b5bfe8973b43ee8a94c31"
         }
       }
     },
@@ -33,16 +33,16 @@
       "iconUri": "https://raw.githubusercontent.com/DamagedDingo/youtube-webos/main/assets/icon.png",
       "manifest": {
         "id": "youtube.leanback.v4.webos22",
-        "version": "0.8.7",
+        "version": "0.8.6",
         "type": "web",
         "title": "YouTube AdFree (webOS 22+)",
         "appDescription": "YouTube AdFree for webOS 22 and newer. Lighter optimized build supporting newer hardware.",
         "iconUri": "https://raw.githubusercontent.com/DamagedDingo/youtube-webos/main/assets/icon.png",
         "sourceUrl": "https://github.com/DamagedDingo/youtube-webos",
         "rootRequired": false,
-        "ipkUrl": "https://github.com/DamagedDingo/youtube-webos/releases/download/v0.8.7/youtube.leanback.v4_0.8.7_all_webOS22%2B.ipk",
+        "ipkUrl": "https://github.com/DamagedDingo/youtube-webos/releases/download/v0.8.6/youtube.leanback.v4_0.8.6_all_webOS22%2B.ipk",
         "ipkHash": {
-          "sha256": "10874eba9c7ee1bdb95ab0b5c22467d38c3e67bab5c7c05bb9b542ff92d12ccd"
+          "sha256": "ea1420537f4222235dc11c29dd7207aafe3e55b8e188e400990fee4db8a86b1e"
         }
       }
     }
