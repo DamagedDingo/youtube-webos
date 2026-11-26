@@ -109,6 +109,12 @@ One owner at a time, claimed as above.
 plus these fork commits is 0.8.6, tagged `v0.8.6`. Fork-only test builds keep a build number
 (`v0.8.5-b2`), are pre-releases, and are produced by `auto-discussion.yml`; they are never a release.
 
+**Bumping.** Set `package.json` `"version"`, run `node tools/sync-version.cjs` (it writes
+`assets/appinfo.json` from it), move the `## [Unreleased]` changelog entries under the new
+`## [X.Y.Z] - YYYY/MM/DD` heading, and land it by PR. `release.yml` re-checks that the tag agrees with
+`assets/appinfo.json` and fails *before* building if they disagree, so a forgotten `sync-version.cjs` is a
+red run, not a mislabelled package. Push the tag only at a commit that is on `main`.
+
 **Size budget.** The legacy (webOS 3-6) bundle budget is **250 KiB** (`tests/smoke/bundle-check.cjs`),
 raised from 240 KiB in 0.8.6 because the Filters work ships to both flavours and the legacy bundle landed
 at 247,287 bytes.
@@ -117,7 +123,8 @@ at 247,287 bytes.
 for an existing tag. It builds both bundles, packages both flavours, attaches them plus the manifest to a
 **draft**, then un-drafts it - the draft is what makes the published release carry final assets from the
 first second it is visible. `build_repo.yml` is dispatched at the end (see below), and the run fails if
-`repo.json` on `main` does not end up naming both assets with matching SHA-256s.
+`repo.json` on `main` does not end up naming both assets with matching SHA-256s. If only that last part
+failed, finish it with `-f recatalogue=true` rather than cutting a new version (see below).
 
 Doing it by hand is still allowed, but keep the same order:
 
@@ -148,6 +155,49 @@ published by `release.yml` therefore does *not* fire `build_repo.yml`'s `release
 only release-event run this fork ever produced came from a hand-published release - so `release.yml` runs
 `gh workflow run build_repo.yml --ref main` itself and watches it. `build_repo.yml` has a `build-repo`
 concurrency group so a dispatched run and an event run cannot race each other's commit to `main`.
+
+**That dispatch needs `actions: write` on the calling workflow, and its absence fails after publishing.**
+`gh workflow run` uses the Actions API, so the token needs the `actions` scope. `release.yml` shipped with
+`permissions: contents: write` only (which zeroes every other scope) and 0.8.7 published both ipks and then
+died on the next step with `could not create workflow dispatch event: HTTP 403: Resource not accessible by
+integration`, leaving `repo.json` on the previous version. The probe that had "proved" the dispatch route
+declared `permissions: actions: write`; the permission was lost when the real workflow was written, and a
+`workflow_dispatch`-triggered probe does not exercise the release job's permission block. Anything that
+must start a workflow therefore carries both scopes:
+
+```yaml
+permissions:
+  contents: write   # tags, releases, assets
+  actions: write    # gh workflow run
+```
+
+The order matters: the 403 arrives *after* the assets are public, which is why the recovery path below
+exists and why the release must never be retried by rebuilding.
+
+**If the catalogue step is the only thing that failed, re-catalogue; do not re-tag.** Once a release is
+published its assets are final, so `release.yml` refuses to touch them. Pick the catalogue up instead:
+
+```sh
+gh workflow run release.yml --ref main -f tag=v<version> -f recatalogue=true
+```
+
+That path downloads the published ipks, dispatches and watches `build_repo.yml`, and runs the same
+`repo.json` verification - it never builds, packages or uploads, so no hash can move. Without
+`recatalogue=true` a second run for a published tag is the plain no-op ("already published") and the
+catalogue is never dispatched. Verify the recovery by checking that `repo.json` on `main` names the tag and
+that its hashes match the bytes you download from the `ipkUrl`s.
+
+**`gh` calls in a step that runs before the checkout must pass `-R "$GITHUB_REPOSITORY"`.** A
+`workflow_dispatch` job starts with an empty workspace, so `gh` cannot infer the repository from the cwd
+and fails with `fatal: not a git repository` (`gh release download`) or `failed to determine base repo`
+(`gh run watch`). The leftover-draft `gh release delete` has the same problem - it runs before
+`actions/checkout` too. Any *new* step that runs before the checkout needs the explicit `-R`.
+
+**`gh run rerun` on a release run is safe and is the idempotency test.** GitHub re-runs the workflow file
+from the run's own commit, and the first thing it does is ask the API whether the tag is already published.
+For a real non-pre-release that answers yes, the run takes "Already published - nothing to do", skips every
+build step and exits 0 with both asset digests unchanged. If a rerun ever rebuilds, the asset hashes move
+and `repo.json` is stale - stop and fix the workflow, do not re-upload.
 
 **Events do start workflows now, but the flag does not tell you.** From the fork's creation until
 2026-11-26 09:30 UTC, pushes, PRs, tags and releases produced no run at all while `workflow_dispatch`
