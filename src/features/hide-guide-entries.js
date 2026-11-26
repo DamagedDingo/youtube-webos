@@ -19,6 +19,14 @@ const log = createLogger('Guide');
 const ENTRY_SELECTOR = 'ytlr-guide-entry-renderer';
 /** Set on an entry the filter hides; ui/styles/global.css turns it into display:none. */
 const HIDDEN_ATTR = 'data-ytaf-guide-hidden';
+/**
+ * Every element in the rail's tree carries this prefix: the entries themselves
+ * (ytlr-guide-entry-renderer) and the containers they are rendered into
+ * (ytlr-guide-renderer, ytlr-guide-section-renderer). Compared against the tag
+ * name, never matched with a selector, so a page that mounts hundreds of tiles
+ * costs the observer one string compare per added element.
+ */
+const GUIDE_TAG_PREFIX = 'ytlr-guide';
 const SHORTS_TITLE = 'shorts';
 
 /** The lower-cased titles the user asked to hide: the list, plus Shorts while that is hidden. */
@@ -57,7 +65,11 @@ function prune() {
   const titles = configRead('enableAdBlock') ? hiddenTitles() : new Set();
 
   let marked = 0;
-  for (const entry of document.querySelectorAll(ENTRY_SELECTOR)) {
+  // Indexed access, not for-of: webOS 3-6 Blink has no Symbol.iterator on a
+  // NodeList, and the legacy build's downlevelled for-of helper needs it.
+  const entries = document.querySelectorAll(ENTRY_SELECTOR);
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i];
     const hide = titles.has(entryTitle(entry));
     const isMarked = entry.hasAttribute(HIDDEN_ATTR);
     if (hide && !isMarked) {
@@ -88,15 +100,29 @@ function createScheduler() {
 }
 
 /**
- * Whether a mutation record adds a guide entry, directly or inside a subtree
- * that was just rendered in. Every other DOM change on the page is none of
+ * Whether a mutation record adds a guide entry, or a guide container a rebuilt
+ * rail will be rendered through. Every other DOM change on the page is none of
  * this module's business: answering yes to all of them puts a prune on every
  * frame the app draws, which starves the features that do work per frame.
+ *
+ * The check is a tag-name compare, not a selector. A shelf or tile mount
+ * (behaviour/thumbnail-quality mounts 240 tiles) adds hundreds of elements per
+ * page, and a matches()/querySelector() per added node is selector work the
+ * observer has no business charging to it.
  */
 function addsGuideEntry(record) {
-  for (const node of record.addedNodes) {
+  // Indexed access, not for-of: record.addedNodes is a NodeList, and webOS 3-6
+  // Blink has no Symbol.iterator on one; an uncaught throw in this callback
+  // fails every mutation on the page, not just the guide's.
+  const nodes = record.addedNodes;
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
     if (node.nodeType !== 1) continue;
-    if (node.matches?.(ENTRY_SELECTOR) || node.querySelector?.(ENTRY_SELECTOR)) return true;
+    // Any guide element schedules the prune: an entry rendered on its own, or
+    // the container a rebuilt rail is filled from. Pruning when the container
+    // lands finds entries already inside it; entries appended in place arrive
+    // as their own records and match here too.
+    if (node.localName.indexOf(GUIDE_TAG_PREFIX) === 0) return true;
   }
   return false;
 }

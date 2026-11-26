@@ -134,16 +134,18 @@ Scans at start-up and again every STARTUP_RETRY_MS until the rules are found or 
 
 > The left-hand guide's entries, hidden in the DOM rather than in the response.
 >
-> The response filter (features/adblock/nav-filters.js) only reaches the guide when YouTube hands it over as JSON this script can intercept; on webOS 25 the guide arrives already rendered, so Shorts, News, Sport and Movies & TV stay in the rail. This walks the rendered entries and takes the named ones out, and keeps doing so while the guide re-renders (a launch, a sign-in, a tab change).
+> The response filter (features/adblock/nav-filters.js) only reaches the guide when YouTube hands it over as JSON this script can intercept; on webOS 25 the guide arrives already rendered, so Shorts, News, Sport and Movies & TV stay in the rail. This marks the rendered entries and keeps marking them while the guide re-renders (a launch, a sign-in, a tab change).
+>
+> Marked, not removed: the rail is a virtualised list, and taking nodes out of it makes YouTube re-render the wrong ones — on the C2 the expanded rail lost its Settings entry while the collapsed rail still showed the entries that had been removed. A CSS rule hides the marked entries in both rails, and an entry that stops matching gets its mark taken off again.
 
-90 lines · imports [core/config.js](core.md#mod-config-js), [core/log.js](core.md#mod-log-js) · imported by [userScript.js](app.md#mod-userscript-js)
+158 lines · imports [core/config.js](core.md#mod-config-js), [core/log.js](core.md#mod-log-js) · imported by [userScript.js](app.md#mod-userscript-js)
 
 **At load:**
 
 - **Calls:** [core/log.js › createLogger](core.md#fn-log-js-createlogger)
 
 <a id="fn-hide-guide-entries-js-hiddentitles"></a>
-**`hiddenTitles()`** · function · L17–30
+**`hiddenTitles()`** · function · L33–46
 
 The lower-cased titles the user asked to hide: the list, plus Shorts while that is hidden.
 
@@ -151,31 +153,47 @@ The lower-cased titles the user asked to hide: the list, plus Shorts while that 
 - **Called by:** [prune](#fn-hide-guide-entries-js-prune)
 - **Settings:** reads `removeGlobalShorts`, `hideGuideEntries`, `hideGuideTitles`
 
+<a id="fn-hide-guide-entries-js-entrytitle"></a>
+**`entryTitle(entry)`** · function · L52–56
+
+An entry's name: the aria-label, which is where the icon-only rail keeps it, or the rendered text when there is no label.
+
+- **Called by:** [prune](#fn-hide-guide-entries-js-prune)
+
 <a id="fn-hide-guide-entries-js-prune"></a>
-**`prune()`** · function · L36–50
+**`prune()`** · function · L63–83
 
-Takes the named guide entries out of the rail. The label is the entry's aria-label: the rail is icon-only, so that is where its name lives.
+Marks the named guide entries, and unmarks the ones that no longer match, so a changed list or a switched-off filter puts them back. Nothing is removed: see the note at the top of the file.
 
-- **Calls:** [core/config.js › configRead](core.md#fn-config-js-configread), [hiddenTitles](#fn-hide-guide-entries-js-hiddentitles)
+- **Calls:** [core/config.js › configRead](core.md#fn-config-js-configread), [entryTitle](#fn-hide-guide-entries-js-entrytitle), [hiddenTitles](#fn-hide-guide-entries-js-hiddentitles)
 - **Called by:** [createScheduler](#fn-hide-guide-entries-js-createscheduler)
 - **Settings:** reads `enableAdBlock`
 - **Browser:** `querySelectorAll`
 
 <a id="fn-hide-guide-entries-js-createscheduler"></a>
-**`createScheduler()`** · function · L53–67
+**`createScheduler()`** · function · L86–100
 
-Runs `prune` once per animation frame, however many mutations arrive.
+Runs `prune` once per tick, however many mutations arrive.
 
 - **Calls:** [prune](#fn-hide-guide-entries-js-prune)
 - **Called by:** [initHideGuideEntries](#fn-hide-guide-entries-js-inithideguideentries)
-- **Browser:** `requestAnimationFrame`
+- **Browser:** `setTimeout`
+
+<a id="fn-hide-guide-entries-js-addsguideentry"></a>
+**`addsGuideEntry(record)`** · function · L113–128
+
+Whether a mutation record adds a guide entry, or a guide container a rebuilt rail will be rendered through. Every other DOM change on the page is none of this module's business: answering yes to all of them puts a prune on every frame the app draws, which starves the features that do work per frame.
+
+The check is a tag-name compare, not a selector. A shelf or tile mount (behaviour/thumbnail-quality mounts 240 tiles) adds hundreds of elements per page, and a matches()/querySelector() per added node is selector work the observer has no business charging to it.
+
+- **Called by:** [initHideGuideEntries](#fn-hide-guide-entries-js-inithideguideentries)
 
 <a id="fn-hide-guide-entries-js-inithideguideentries"></a>
-**`initHideGuideEntries()`** · function, exported · L74–90
+**`initHideGuideEntries()`** · function, exported · L135–158
 
-Starts hiding the named guide entries and keeps hiding them: the guide is rebuilt on launch, sign-in and tab changes, and each rebuild brings the entries back.
+Starts hiding the named guide entries and keeps hiding them: the guide is rebuilt on launch, sign-in and tab changes, and each rebuild brings the entries back unmarked.
 
-- **Calls:** [core/config.js › configAddChangeListener](core.md#fn-config-js-configaddchangelistener), [createScheduler](#fn-hide-guide-entries-js-createscheduler)
+- **Calls:** [core/config.js › configAddChangeListener](core.md#fn-config-js-configaddchangelistener), [addsGuideEntry](#fn-hide-guide-entries-js-addsguideentry), [createScheduler](#fn-hide-guide-entries-js-createscheduler)
 - **Called by:** [userScript.js (at load)](app.md#mod-userscript-js)
 - **Settings:** uses `enableAdBlock`, `removeGlobalShorts`, `hideGuideEntries`, `hideGuideTitles`
 - **Browser:** `MutationObserver`

@@ -103,6 +103,7 @@ const full = [
   test('legacy', 'tests/smoke/perf-mon-test.cjs'),
   test('legacy', 'tests/behaviour/adblock-test.cjs'),
   test('legacy', 'tests/behaviour/adblock-lifecycle-test.cjs'),
+  test('legacy', 'tests/behaviour/guide-hide-test.cjs'),
   test('legacy', 'tests/behaviour/return-dislike-test.cjs'),
   test('legacy', 'tests/behaviour/return-dislike-navigation-test.cjs'),
   test('legacy', 'tests/behaviour/thumbnail-nav-pause-test.cjs'),
