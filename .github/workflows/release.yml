@@ -341,7 +341,7 @@ jobs:
             exit 1
           fi
           echo "build_repo.yml run $run_id catalogues $TAG"
-          timeout 600 gh run watch "$run_id" --exit-status --interval 10 \
+          timeout 600 gh run watch "$run_id" -R "$GITHUB_REPOSITORY" --exit-status --interval 10 \
             || { echo "::error::build_repo.yml run $run_id did not succeed - repo.json does not name $TAG yet"; exit 1; }
 
       - name: Verify repo.json carries these exact assets
