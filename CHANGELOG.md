@@ -6,9 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.8.6] - 2026/11/26
+
+The fork's first release of its own, built from upstream 0.8.5 plus four
+commits. Installs over 0.8.5 like any other update; settings are kept.
+
+Fork versions are the next patch above the upstream release they carry (this
+one is upstream 0.8.5, so 0.8.6). Fork-only test builds keep the `-bN`
+pre-release suffix and are never published to the Homebrew repository.
+
 ## Added
 
 + "Filters" tab (its own tab in the settings, off by default except where noted): every cosmetic filter moves off the Main page, which keeps Ad Blocking. News shelves are removed from Home and Search ("Remove News Shelves", on by default); unwanted guide entries are hidden by title, so the left-hand rail loses News, Sport and Movies & TV with the list editable in the panel ("Hide Unwanted Guide Entries" + "Guide entries to hide", on by default); members-only and early-access tiles are hidden by their badge, and the voice search button is gone along with the web-speech launch params ("Hide Members-only Videos", "Hide Voice Search Button", on by default)
+
+## Changed
+
++ The README now states that this fork is maintained by an AI agent for one person, unreviewed, and tested on a single LG OLED C2
 
 ## [0.8.5] - 2026/11/13
 
