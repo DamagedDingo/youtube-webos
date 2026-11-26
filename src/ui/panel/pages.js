@@ -55,7 +55,8 @@ export function buildMainPage() {
     elRemoveGlobalShorts,
     elRemoveLiveVideos,
     elRemoveTopLiveGames,
-    elRemoveMostRelevant
+    elRemoveMostRelevant,
+    createConfigCheckbox('removeNewsShelves')
   );
   if (isGuestMode()) cosmeticGroup.push(createConfigCheckbox('hideGuestSignInPrompts'));
 

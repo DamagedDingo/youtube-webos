@@ -27,6 +27,7 @@ export const cfgFlags = {
   removeLiveVideos: false,
   removeTopLiveGames: false,
   removeMostRelevant: false,
+  removeNewsShelves: false,
   hideGuestSignInPrompts: false,
   enableLegacyEmojiFix: false,
   hideEndcards: false,
@@ -63,6 +64,7 @@ function recomputeFilterFlags() {
   cfgFlags.removeLiveVideos = adBlock && !!cfgSnapshot[CONFIG_KEYS.LIVE];
   cfgFlags.removeTopLiveGames = adBlock && !!cfgSnapshot[CONFIG_KEYS.LIVE_GAMES];
   cfgFlags.removeMostRelevant = adBlock && !!cfgSnapshot[CONFIG_KEYS.MOST_RELEVANT];
+  cfgFlags.removeNewsShelves = adBlock && !!cfgSnapshot[CONFIG_KEYS.NEWS];
   cfgFlags.hideGuestSignInPrompts = adBlock && !!cfgSnapshot[CONFIG_KEYS.GUEST_PROMPTS];
   // Independent switches on the same hook. The emoji rewrite is for webOS 3
   // and 4 only, where the system font has no colour emoji.

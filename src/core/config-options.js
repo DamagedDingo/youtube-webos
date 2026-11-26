@@ -198,6 +198,7 @@ export const configOptions = new Map([
   ['removeLiveVideos', { default: false, desc: 'Remove Live Videos (Global)' }],
   ['removeTopLiveGames', { default: false, desc: 'Remove Top Live Games' }],
   ['removeMostRelevant', { default: false, desc: 'Remove "Most Relevant" Shelf' }],
+  ['removeNewsShelves', { default: true, desc: 'Remove News Shelves' }],
   ['enableRowsAhead', { default: true, desc: 'Load Rows Ahead' }],
   ['enableSponsorBlock', { default: true, desc: 'SponsorBlock' }],
   ['enableMutedSegments', { default: false, desc: 'Allow segments that mute audio' }],

@@ -20,7 +20,10 @@ export const UI_STRINGS = {
   SHORTS_TITLE: 'Shorts',
   TOP_LIVE_GAMES_TITLE: 'Top live games',
   MOST_RELEVANT_TITLE: 'Most relevant',
-  GUEST_PROMPT_TEXT: 'Sign in for better recommendations'
+  GUEST_PROMPT_TEXT: 'Sign in for better recommendations',
+  // A shelf whose title matches this is a news shelf: 'News', 'Breaking news',
+  // 'Live news'. Localised titles will not match.
+  NEWS_SHELF_TITLE_PATTERN: /\bnews\b/i
 };
 
 export const YT_CONSTANTS = {
@@ -41,6 +44,7 @@ export const CONFIG_KEYS = {
   LIVE: 'removeLiveVideos',
   LIVE_GAMES: 'removeTopLiveGames',
   MOST_RELEVANT: 'removeMostRelevant',
+  NEWS: 'removeNewsShelves',
   GUEST_PROMPTS: 'hideGuestSignInPrompts',
   EMOJI_FIX: 'enableLegacyEmojiFix',
   ENDCARDS: 'hideEndcards',

@@ -134,18 +134,21 @@ function anyContentCheck(flags) {
   return !!flags.enableAdBlock;
 }
 
-/** Whether a whole shelf goes under the flags: the Shorts shelf by type or title, the titled shelves. */
+/** Whether a whole shelf goes under the flags: the Shorts shelf by type or title, the named shelves. */
 function shouldDropShelf(shelf, flags) {
-  const { removeGlobalShorts, removeTopLiveGames, removeMostRelevant } = flags;
+  const { removeGlobalShorts, removeTopLiveGames, removeMostRelevant, removeNewsShelves } = flags;
   if (removeGlobalShorts && shelf.tvhtml5ShelfRendererType === YT_CONSTANTS.SHELF_TYPE_SHORTS) {
     return true;
   }
-  if (!removeGlobalShorts && !removeTopLiveGames && !removeMostRelevant) return false;
+  if (!removeGlobalShorts && !removeTopLiveGames && !removeMostRelevant && !removeNewsShelves) {
+    return false;
+  }
   const title = getShelfTitle(shelf);
   return (
     (removeGlobalShorts && title === UI_STRINGS.SHORTS_TITLE) ||
     (removeTopLiveGames && title === UI_STRINGS.TOP_LIVE_GAMES_TITLE) ||
-    (removeMostRelevant && title === UI_STRINGS.MOST_RELEVANT_TITLE)
+    (removeMostRelevant && title === UI_STRINGS.MOST_RELEVANT_TITLE) ||
+    (removeNewsShelves && UI_STRINGS.NEWS_SHELF_TITLE_PATTERN.test(title))
   );
 }
 
