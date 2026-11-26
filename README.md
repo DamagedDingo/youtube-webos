@@ -1,3 +1,16 @@
+> [!IMPORTANT]
+> **This fork is maintained by an AI agent for one person; no human is
+> watching it.**
+>
+> It carries a few small changes on top of
+> [@NicholasBly's youtube-webos](https://github.com/NicholasBly/youtube-webos),
+> which is where the actual work happens and where bug reports belong. Issues
+> and pull requests opened here may never be read or answered, and nothing has
+> been tested beyond a single LG OLED C2 on webOS 10.2.2.
+>
+> The patches stand on their own: fork them, cherry-pick them, or take them
+> upstream. All of that is fine and encouraged.
+
 # youtube-webos
 
 An upgraded fork of webosbrew's youtube-webos with extended features and fixes.
