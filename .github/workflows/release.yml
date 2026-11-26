@@ -1,41 +1,347 @@
 name: Build & Release
 
+# The single owner of a release on this fork.
+#
+# A tag push (or a dispatch naming an existing tag) builds BOTH flavours,
+# attaches them to a DRAFT release, and only then un-drafts it. build_repo.yml
+# listens for `release: published` and hashes whatever is attached at that
+# moment, so the draft is what makes the published event see final assets.
+#
+# Nothing here replaces an asset on an already-published release: repo.json
+# records its SHA-256 and Homebrew Channel verifies it, so a rebuild is a new
+# patch version. A second run for an already-published tag exits without
+# touching either asset.
+#
+# The test suite is not run here on purpose: main.yml gates `main`, and a
+# release tag must be cut from a green main.
 on:
   push:
-    branches:
-      - '!*'
     tags:
       - 'v*.*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to publish from (e.g. v0.8.7)'
+        required: true
+        type: string
+      prerelease:
+        description: 'Force a pre-release (a -suffix in the tag is a pre-release anyway)'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
 
 jobs:
-  build-and-release:
+  release:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Resolve the tag
+        id: tag
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+          EVENT_TAG: ${{ github.ref_name }}
+          FORCE_PRERELEASE: ${{ inputs.prerelease }}
+        run: |
+          set -euo pipefail
+          tag="${INPUT_TAG:-}"
+          [ -n "$tag" ] || tag="$EVENT_TAG"
+          tag="${tag#refs/tags/}"
+          case "$tag" in
+            v[0-9]*.[0-9]*) ;;
+            *) echo "::error::'$tag' is not a version tag (v<major>.<minor>[.<patch>][-suffix])"; exit 1 ;;
+          esac
+          version="${tag#v}"
+          prerelease=false
+          if [ "$FORCE_PRERELEASE" = "true" ]; then prerelease=true; fi
+          case "$version" in *-*) prerelease=true ;; esac
+          {
+            echo "name=$tag"
+            echo "version=$version"
+            echo "prerelease=$prerelease"
+          } >> "$GITHUB_OUTPUT"
+          echo "Releasing $tag (pre-release: $prerelease)"
+
+      # Checked before anything is built: a re-run for a tag that is already
+      # published must not replace an asset that repo.json has hashed.
+      - name: Is this tag already released?
+        id: state
+        env:
+          TAG: ${{ steps.tag.outputs.name }}
+        run: |
+          set -euo pipefail
+          err="$(mktemp)"
+          if gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}" > existing-release.json 2>"$err"; then
+            if [ "$(jq -r '.isDraft' existing-release.json)" = "true" ]; then
+              echo "state=draft" >> "$GITHUB_OUTPUT"
+              echo "$TAG exists as a draft: it is invisible to consumers, so it is rebuilt."
+            else
+              echo "state=published" >> "$GITHUB_OUTPUT"
+              echo "$TAG is already published."
+            fi
+          elif grep -q 'HTTP 404' "$err"; then
+            echo "state=absent" >> "$GITHUB_OUTPUT"
+            echo "$TAG has no release yet."
+          else
+            echo "::error::cannot query releases/tags/$TAG"
+            cat "$err"
+            exit 1
+          fi
+
+      - name: Already published - nothing to do
+        if: steps.state.outputs.state == 'published'
+        env:
+          TAG: ${{ steps.tag.outputs.name }}
+        run: |
+          {
+            echo "## \`$TAG\` is already published"
+            echo
+            echo "Assets on a published release are final: \`repo.json\` records their SHA-256 and"
+            echo "Homebrew Channel verifies it. Neither ipk was touched by this run."
+            echo
+            echo "A rebuild is a new patch version and a new tag, not another run of this workflow."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::notice::$TAG is already published; both assets and their hashes were left untouched."
+
+      - name: Drop the leftover draft
+        if: steps.state.outputs.state == 'draft'
+        env:
+          TAG: ${{ steps.tag.outputs.name }}
+        run: |
+          set -euo pipefail
+          # A draft is not visible to consumers and build_repo.yml only runs on
+          # `release: published`, so nothing has hashed this release yet.
+          gh release delete "$TAG" --yes
+          echo "Deleted the stale draft for $TAG; the tag itself is untouched."
+
+      - name: Checkout the tag
+        if: steps.state.outputs.state != 'published'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.tag.outputs.name }}
+
+      - name: Guard - appinfo version matches the tag
+        id: app
+        if: steps.state.outputs.state != 'published'
+        env:
+          TAG_VERSION: ${{ steps.tag.outputs.version }}
+        run: |
+          set -euo pipefail
+          app="$(node -p "require('./assets/appinfo.json').version")"
+          if [ "${TAG_VERSION%%-*}" != "$app" ]; then
+            echo "::error::the tag is v${TAG_VERSION} but assets/appinfo.json says ${app}; bump the version (npm version patch), commit, and re-tag"
+            exit 1
+          fi
+          echo "app_version=$app" >> "$GITHUB_OUTPUT"
 
       - name: Set up Node.js
+        if: steps.state.outputs.state != 'published'
         uses: actions/setup-node@v4
         with:
           node-version: lts/*
           cache: npm
 
-      - run: npm ci
-      - run: npm run build
-      - run: npm run package
-      - run: npm run manifest
+      # Only the webOS CLI has install scripts (an optional native SSH
+      # binding) and packaging does not need it.
+      - name: Install dependencies
+        if: steps.state.outputs.state != 'published'
+        run: npm ci --ignore-scripts
 
-      - name: Create release
-        uses: ncipollo/release-action@v1
-        with:
-          name: 'Release ${{ github.ref }}'
-          prerelease: true
-          draft: false
-          allowUpdates: true
-          omitNameDuringUpdate: true
-          omitBodyDuringUpdate: true
-          omitDraftDuringUpdate: true
-          omitPrereleaseDuringUpdate: true
-          artifacts: '*.ipk,*.manifest.json'
+      - name: Build legacy (webOS 3-6) bundle
+        if: steps.state.outputs.state != 'published'
+        run: npm run build
+
+      - name: Package legacy bundle
+        if: steps.state.outputs.state != 'published'
+        run: npm run package
+
+      - name: Collect the legacy ipk
+        if: steps.state.outputs.state != 'published'
+        env:
+          APP_VERSION: ${{ steps.app.outputs.app_version }}
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+          legacy="youtube.leanback.v4_${APP_VERSION}_all.ipk"
+          if [ ! -f "dist/$legacy" ]; then
+            echo "::error::ares-package did not produce dist/$legacy"
+            ls -l dist
+            exit 1
+          fi
+          mv "dist/$legacy" "release-assets/$legacy"
+          # The webOS 22+ packaging step must package the modern bundle only.
+          rm -f dist/*.ipk
+
+      - name: Build webOS 22+ bundle
+        if: steps.state.outputs.state != 'published'
+        run: npm run build:modern
+
+      - name: Package webOS 22+ bundle
+        if: steps.state.outputs.state != 'published'
+        env:
+          APP_VERSION: ${{ steps.app.outputs.app_version }}
+        run: |
+          set -euo pipefail
+          mkdir -p modern
+          npx ares-package -n dist -o modern
+          shopt -s nullglob
+          built=(modern/*.ipk)
+          if [ "${#built[@]}" -ne 1 ]; then
+            echo "::error::expected one ipk from ares-package, got ${#built[@]}"
+            ls -l modern
+            exit 1
+          fi
+          mv "${built[0]}" "release-assets/youtube.leanback.v4_${APP_VERSION}_all_webOS22+.ipk"
+
+      - name: Generate the Homebrew Channel manifest
+        if: steps.state.outputs.state != 'published'
+        run: |
+          set -euo pipefail
+          # gen-manifest hashes ./<id>_<version>_all.ipk relative to the working
+          # directory, so it runs where the legacy ipk now lives.
+          ( cd release-assets && node ../tools/gen-manifest.cjs youtube.leanback.v4.manifest.json )
+
+      - name: Verify the assets before they become visible
+        if: steps.state.outputs.state != 'published'
+        env:
+          APP_VERSION: ${{ steps.app.outputs.app_version }}
+        run: |
+          set -euo pipefail
+          for f in \
+            "youtube.leanback.v4_${APP_VERSION}_all.ipk" \
+            "youtube.leanback.v4_${APP_VERSION}_all_webOS22+.ipk" \
+            "youtube.leanback.v4.manifest.json"
+          do
+            if [ ! -s "release-assets/$f" ]; then
+              echo "::error::release-assets/$f is missing or empty"
+              exit 1
+            fi
+          done
+          ls -l release-assets
+          sha256sum release-assets/*
+
+      - name: Create the draft release with both flavours
+        if: steps.state.outputs.state != 'published'
+        env:
+          TAG: ${{ steps.tag.outputs.name }}
+          APP_VERSION: ${{ steps.app.outputs.app_version }}
+          PRE: ${{ steps.tag.outputs.prerelease }}
+        run: |
+          set -euo pipefail
+          args=(--draft --title "$APP_VERSION")
+          if [ "$PRE" = "true" ]; then
+            args+=(--prerelease)
+            pre_note="This is a pre-release, so \`build_repo.yml\` will not catalogue it. "
+          else
+            pre_note="\`repo.json\` on \`main\` is regenerated from these assets by \`build_repo.yml\` once this release is published. "
+          fi
+          cat > release-notes.md <<EOF
+          ${pre_note}
+
+          Same app id (\`youtube.leanback.v4\`), same version (\`${APP_VERSION}\`) - install exactly one:
+
+          | Asset | Target |
+          | --- | --- |
+          | \`youtube.leanback.v4_${APP_VERSION}_all.ipk\` | webOS 3-6 (legacy bundle) |
+          | \`youtube.leanback.v4_${APP_VERSION}_all_webOS22+.ipk\` | webOS 22 and newer |
+
+          Built from tag \`${TAG}\` by \`.github/workflows/release.yml\`. Assets on a published release are final: a rebuild is a new patch version.
+          EOF
+          gh release create "$TAG" \
+            release-assets/*.ipk \
+            release-assets/*.manifest.json \
+            "${args[@]}" \
+            --notes-file release-notes.md
+          echo "Draft created:"
+          gh release view "$TAG" --json isDraft,isPrerelease,assets \
+            --jq '"draft=\(.isDraft) prerelease=\(.isPrerelease)", (.assets[] | "  \(.name) \(.size) bytes \(.digest)")'
+
+      - name: Publish the draft
+        if: steps.state.outputs.state != 'published'
+        env:
+          TAG: ${{ steps.tag.outputs.name }}
+        run: |
+          set -euo pipefail
+          # Only now does `release: published` fire - with both assets attached,
+          # which is what build_repo.yml hashes.
+          gh release edit "$TAG" --draft=false
+          gh release view "$TAG" --json tagName,isDraft,isPrerelease,assets \
+            --jq '"published \(.tagName) draft=\(.isDraft) prerelease=\(.isPrerelease)", (.assets[] | "  \(.name) \(.size) bytes \(.digest)")'
+
+      - name: Wait for build_repo.yml to catalogue the release
+        if: steps.state.outputs.state != 'published' && steps.tag.outputs.prerelease != 'true'
+        env:
+          TAG: ${{ steps.tag.outputs.name }}
+        run: |
+          set -euo pipefail
+          started="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          run_id=""
+          for _ in $(seq 1 24); do
+            run_id="$(gh run list --workflow build_repo.yml --event release --limit 10 \
+              --json databaseId,createdAt \
+              --jq "[.[] | select(.createdAt >= \"$started\")][0].databaseId // empty")"
+            if [ -n "$run_id" ]; then break; fi
+            sleep 10
+          done
+          if [ -z "$run_id" ]; then
+            echo "::warning::no build_repo.yml run appeared for $TAG within 4 minutes; start it with 'gh workflow run build_repo.yml --ref main' and check repo.json"
+            exit 0
+          fi
+          echo "build_repo.yml run $run_id picked up $TAG"
+          timeout 600 gh run watch "$run_id" --exit-status --interval 10 \
+            || { echo "::error::build_repo.yml run $run_id did not succeed - repo.json does not name $TAG yet"; exit 1; }
+
+      - name: Verify repo.json carries these exact assets
+        if: steps.state.outputs.state != 'published' && steps.tag.outputs.prerelease != 'true'
+        env:
+          TAG: ${{ steps.tag.outputs.name }}
+        run: |
+          set -euo pipefail
+          url="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/main/repo.json"
+          found=false
+          for _ in $(seq 1 30); do
+            if curl -fsSL "$url" -o repo-published.json 2>/dev/null \
+              && jq -e --arg t "/download/${TAG}/" '([.packages[].manifest.ipkUrl | contains($t)] | length == 2 and all)' repo-published.json >/dev/null; then
+              found=true
+              break
+            fi
+            sleep 10
+          done
+          if [ "$found" != "true" ]; then
+            echo "::error::repo.json on main does not name both $TAG assets"
+            jq -r '.packages[].manifest.ipkUrl' repo-published.json || true
+            exit 1
+          fi
+          local_hashes="$(sha256sum release-assets/*.ipk | awk '{print $1}' | sort)"
+          remote_hashes="$(jq -r '.packages[].manifest.ipkHash.sha256' repo-published.json | sort)"
+          if [ "$local_hashes" != "$remote_hashes" ]; then
+            echo "::error::repo.json hashes do not match the published assets"
+            echo "local:"; echo "$local_hashes"
+            echo "repo.json:"; echo "$remote_hashes"
+            exit 1
+          fi
+          echo "repo.json on main names $TAG and both SHA-256s match:"
+          jq -r '.packages[] | "  \(.id) \(.manifest.version) \(.manifest.ipkHash.sha256)"' repo-published.json
+
+      - name: Summarise
+        if: steps.state.outputs.state != 'published'
+        env:
+          TAG: ${{ steps.tag.outputs.name }}
+          APP_VERSION: ${{ steps.app.outputs.app_version }}
+          PRE: ${{ steps.tag.outputs.prerelease }}
+        run: |
+          {
+            echo "## Published \`$TAG\`"
+            echo
+            echo "- legacy: \`youtube.leanback.v4_${APP_VERSION}_all.ipk\`"
+            echo "- webOS 22+: \`youtube.leanback.v4_${APP_VERSION}_all_webOS22+.ipk\`"
+            echo "- manifest: \`youtube.leanback.v4.manifest.json\`"
+            echo "- pre-release: \`$PRE\`"
+          } >> "$GITHUB_STEP_SUMMARY"
