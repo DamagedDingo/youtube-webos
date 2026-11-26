@@ -67,6 +67,20 @@ function createScheduler() {
 }
 
 /**
+ * Whether a mutation record adds a guide entry, directly or inside a subtree
+ * that was just rendered in. Every other DOM change on the page is none of
+ * this module's business: answering yes to all of them puts a prune on every
+ * frame the app draws, which starves the features that do work per frame.
+ */
+function addsGuideEntry(record) {
+  for (const node of record.addedNodes) {
+    if (node.nodeType !== 1) continue;
+    if (node.matches?.(ENTRY_SELECTOR) || node.querySelector?.(ENTRY_SELECTOR)) return true;
+  }
+  return false;
+}
+
+/**
  * Starts hiding the named guide entries and keeps hiding them: the guide is
  * rebuilt on launch, sign-in and tab changes, and each rebuild brings the
  * entries back.
@@ -76,7 +90,14 @@ export function initHideGuideEntries() {
   const schedule = createScheduler();
 
   schedule();
-  const observer = new MutationObserver(schedule);
+  const observer = new MutationObserver((records) => {
+    for (const record of records) {
+      if (addsGuideEntry(record)) {
+        schedule();
+        return;
+      }
+    }
+  });
   observer.observe(document.body, { childList: true, subtree: true });
 
   for (const key of [
