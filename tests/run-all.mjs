@@ -45,7 +45,10 @@ const argValue = (flag) => process.argv.find((a) => a.startsWith(flag))?.slice(f
 const only = argValue('--only=');
 // The scripts mostly wait on timers rather than compute, so one per core.
 const jobs = Math.max(1, Number(argValue('--jobs=')) || Math.max(2, cpus().length));
-const minScriptTimeout = 30_000;
+// A floor for every check and script, and for the checks their whole budget:
+// prettier and eslint alone take ~28 s here, and the perf-mon script ~50 s, so a
+// 30 s floor killed them on a loaded machine and reported it as a failure.
+const minScriptTimeout = 60_000;
 const buildTimeout = 120_000;
 
 // A test script and the bundle it needs: null for the unit tests that load
