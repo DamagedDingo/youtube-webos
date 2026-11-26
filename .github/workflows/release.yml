@@ -12,7 +12,9 @@ name: Build & Release
 # Nothing here replaces an asset on an already-published release: repo.json
 # records its SHA-256 and Homebrew Channel verifies it, so a rebuild is a new
 # patch version. A second run for an already-published tag exits without
-# touching either asset.
+# touching either asset; `recatalogue=true` re-runs only the catalogue step
+# against the published assets, which is how a failed dispatch is finished
+# without a new version.
 #
 # The test suite is not run here on purpose: main.yml gates `main`, and a
 # release tag must be cut from a green main.
@@ -31,9 +33,19 @@ on:
         required: false
         type: boolean
         default: false
+      recatalogue:
+        description: 'Finish the catalogue step for an already-published release (touches no asset)'
+        required: false
+        type: boolean
+        default: false
 
+# `actions: write` is not optional: the last step dispatches build_repo.yml with
+# GITHUB_TOKEN, and `gh workflow run` needs that permission. With only
+# `contents: write` the dispatch returns HTTP 403 "Resource not accessible by
+# integration" AFTER the release is already published, leaving repo.json stale.
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: release-${{ inputs.tag || github.ref_name }}
@@ -98,7 +110,7 @@ jobs:
           fi
 
       - name: Already published - nothing to do
-        if: steps.state.outputs.state == 'published'
+        if: steps.state.outputs.state == 'published' && inputs.recatalogue != true
         env:
           TAG: ${{ steps.tag.outputs.name }}
         run: |
@@ -109,6 +121,9 @@ jobs:
             echo "Homebrew Channel verifies it. Neither ipk was touched by this run."
             echo
             echo "A rebuild is a new patch version and a new tag, not another run of this workflow."
+            echo
+            echo "If only the catalogue is missing, re-run with \`recatalogue=true\`: that dispatches"
+            echo "\`build_repo.yml\` against the published assets without rebuilding them."
           } >> "$GITHUB_STEP_SUMMARY"
           echo "::notice::$TAG is already published; both assets and their hashes were left untouched."
 
@@ -277,8 +292,27 @@ jobs:
           gh release view "$TAG" --json tagName,isDraft,isPrerelease,assets \
             --jq '"published \(.tagName) draft=\(.isDraft) prerelease=\(.isPrerelease)", (.assets[] | "  \(.name) \(.size) bytes \(.digest)")'
 
+      # Only a `recatalogue=true` run on an already-published tag reaches this:
+      # the assets are final, so they are downloaded rather than rebuilt, purely
+      # so the check below can compare repo.json against the real bytes.
+      - name: Fetch the published assets for the catalogue check
+        if: steps.state.outputs.state == 'published'
+        env:
+          TAG: ${{ steps.tag.outputs.name }}
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+          gh release download "$TAG" --pattern '*.ipk' --dir release-assets
+          count="$(ls -1 release-assets/*.ipk | wc -l)"
+          if [ "$count" -ne 2 ]; then
+            echo "::error::$TAG carries $count ipk assets, expected 2"
+            ls -l release-assets
+            exit 1
+          fi
+          sha256sum release-assets/*.ipk
+
       - name: Catalogue the release in repo.json
-        if: steps.state.outputs.state != 'published' && steps.tag.outputs.prerelease != 'true'
+        if: (steps.state.outputs.state != 'published' || inputs.recatalogue == true) && steps.tag.outputs.prerelease != 'true'
         env:
           TAG: ${{ steps.tag.outputs.name }}
         run: |
@@ -300,7 +334,7 @@ jobs:
             sleep 10
           done
           if [ -z "$run_id" ]; then
-            echo "::error::gh workflow run build_repo.yml did not start a run for $TAG"
+            echo "::error::gh workflow run build_repo.yml did not start a run for $TAG - a 403 here means this workflow lacks the 'actions: write' permission"
             exit 1
           fi
           echo "build_repo.yml run $run_id catalogues $TAG"
@@ -308,7 +342,7 @@ jobs:
             || { echo "::error::build_repo.yml run $run_id did not succeed - repo.json does not name $TAG yet"; exit 1; }
 
       - name: Verify repo.json carries these exact assets
-        if: steps.state.outputs.state != 'published' && steps.tag.outputs.prerelease != 'true'
+        if: (steps.state.outputs.state != 'published' || inputs.recatalogue == true) && steps.tag.outputs.prerelease != 'true'
         env:
           TAG: ${{ steps.tag.outputs.name }}
         run: |
