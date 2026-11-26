@@ -18,6 +18,7 @@ const {
   toasts,
   panelCheckbox,
   cycleRow,
+  panelTab,
   showPanel
 } = require('../harness/fixtures.cjs');
 
@@ -117,7 +118,8 @@ function boot(cfg, more) {
     );
 
     // The opacity row: a burst of steps is one rewrite of the rule, after 150 ms.
-    d.querySelectorAll('.ytaf-tab-btn')[4].click();
+    // The tab by label: an index broke when the Filters page was added.
+    panelTab(win, 'UI Tweaks').click();
     const row = cycleRow(win, 'Video shelf opacity', '#ytaf-page-ui-tweaks');
     t('setup: the opacity row is on the UI tweaks page', !!row);
     row.focus();

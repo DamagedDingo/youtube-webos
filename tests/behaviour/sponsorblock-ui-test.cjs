@@ -15,6 +15,7 @@ const {
   press,
   panelCheckbox,
   cycleRow,
+  panelTab,
   showPanel
 } = require('../harness/fixtures.cjs');
 
@@ -31,7 +32,9 @@ function boot(segments, cfg, currentTime, options) {
       return style ? style.textContent : null;
     },
     popup: () => d.querySelector('.sb-segments-popup'),
-    tab: (index) => d.querySelectorAll('.ytaf-tab-btn')[index].click()
+    // By label, not position: the Filters page sits between Main and
+    // SponsorBlock in the panel's PAGES, and any page added there shifts an index.
+    tab: (name) => panelTab(page.win, name).click()
   });
 }
 
@@ -47,7 +50,7 @@ function boot(segments, cfg, currentTime, options) {
     t('no popup before the panel shows it', !p.popup());
     await showPanel(p.win);
     t('the Main tab shows no popup', !p.popup() || !p.popup().classList.contains('visible'));
-    p.tab(1);
+    p.tab('SponsorBlock');
     await wait(30);
     t(
       'the SponsorBlock tab shows the popup on a watch page',
@@ -83,9 +86,9 @@ function boot(segments, cfg, currentTime, options) {
       rows()[1].querySelector('.sb-segment-dot').style.backgroundColor
     );
     const firstRow = rows()[0];
-    p.tab(0);
+    p.tab('Main');
     t('back on the Main tab the popup hides', !p.popup().classList.contains('visible'));
-    p.tab(1);
+    p.tab('SponsorBlock');
     t(
       'shown again without rebuilding the rows',
       p.popup().classList.contains('visible') && rows()[0] === firstRow
@@ -112,7 +115,7 @@ function boot(segments, cfg, currentTime, options) {
     const p = boot([seg('sponsor', 20, 30)], {}, 40);
     await p.ready();
     await showPanel(p.win);
-    p.tab(1);
+    p.tab('SponsorBlock');
     await wait(30);
     p.popup().focus();
     t('setup: the popup has the focus', p.win.document.activeElement === p.popup());
@@ -127,7 +130,7 @@ function boot(segments, cfg, currentTime, options) {
     const p = boot([seg('selfpromo', 0, 0, 'full')], {}, 40);
     await p.ready();
     await showPanel(p.win);
-    p.tab(1);
+    p.tab('SponsorBlock');
     await wait(30);
     t(
       'a video with only a full-video label has no list to show',
@@ -140,7 +143,7 @@ function boot(segments, cfg, currentTime, options) {
     const p = boot([seg('sponsor', 20, 30)], {}, 40, { alsoFor: [next] });
     await p.ready();
     await showPanel(p.win);
-    p.tab(1);
+    p.tab('SponsorBlock');
     await wait(30);
     t('setup: the popup is shown', !!p.popup() && p.popup().classList.contains('visible'));
     p.win.location.hash = '#/watch?v=' + next;
@@ -159,7 +162,7 @@ function boot(segments, cfg, currentTime, options) {
     const p = boot([seg('sponsor', 20, 30)], {}, 10);
     await p.ready();
     await showPanel(p.win);
-    p.tab(1);
+    p.tab('SponsorBlock');
     const row = cycleRow(p.win, 'Sponsor', '#ytaf-page-sponsor');
     row.focus();
     // Auto Skip, then Manual Skip.
@@ -266,7 +269,7 @@ function boot(segments, cfg, currentTime, options) {
       mark() && mark().style.cssText
     );
     await showPanel(p.win);
-    p.tab(1);
+    p.tab('SponsorBlock');
     const row = cycleRow(p.win, 'Sponsor', '#ytaf-page-sponsor');
     const input = row.querySelector('input[type="color"]');
     const before = { overlay: p.overlay(), mark: mark() };
@@ -321,7 +324,7 @@ function boot(segments, cfg, currentTime, options) {
       p.overlay() && marks().join('|')
     );
     await showPanel(p.win);
-    p.tab(1);
+    p.tab('SponsorBlock');
     await wait(30);
     const dots = () =>
       Array.from(p.popup().querySelectorAll('.sb-segment-row .sb-segment-dot')).map(

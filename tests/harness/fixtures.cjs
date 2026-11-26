@@ -191,6 +191,19 @@ function cycleRow(win, label, pageSel) {
   );
 }
 
+/**
+ * The panel tab whose button reads `label` (trimmed). Labels come from
+ * panel.js's PAGES, so a page inserted anywhere in that list cannot point a
+ * test at the wrong tab the way an index does. Throws when the panel has no
+ * such tab, naming it: a renamed page fails here, not three lines later.
+ */
+function panelTab(win, label) {
+  const tabs = Array.from(win.document.querySelectorAll('.ytaf-tab-btn'));
+  const tab = tabs.find((b) => b.textContent.trim() === label);
+  if (!tab) throw new Error(`panelTab: the panel has no tab labelled "${label}"`);
+  return tab;
+}
+
 /** The box `el` reports under page.cjs's `layout: 'grid'`. */
 function place(el, x, y, w, h) {
   el.setAttribute('data-x', String(x));
@@ -434,6 +447,7 @@ module.exports = {
   openPanel,
   showPanel,
   panelCheckbox,
+  panelTab,
   storedConfig,
   cycleRow,
   place,
