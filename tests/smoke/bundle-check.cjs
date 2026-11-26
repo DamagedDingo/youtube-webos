@@ -27,8 +27,11 @@ const flavour = process.argv[3] || 'legacy';
 // The webOS 22+ budget went from 175 to 255 KiB with 0.8.5 b2: the playback
 // speed engine (~45 KiB, src/vendor/playback-speed) and DeArrow's title
 // formatter (~33 KiB, src/vendor/dearrow) are in that build only.
+// The legacy budget went from 240 to 250 KiB with 0.8.6: the Filters tab, the
+// guide-title hiding and the members-only/voice-search filters ship to both
+// flavours and put the legacy bundle 1.5 KiB over the old budget (247.3 KiB).
 const FLAVOURS = {
-  legacy: { ecmaVersion: 5, budget: 240 * 1024, iifeLimit: 40 },
+  legacy: { ecmaVersion: 5, budget: 250 * 1024, iifeLimit: 40 },
   modern: { ecmaVersion: 2022, budget: 255 * 1024, iifeLimit: 20 }
 };
 

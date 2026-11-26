@@ -57,7 +57,10 @@ function load(webOSVersion) {
   const m = load(5);
   t(
     'with every setting off, every flag and summary switch is off',
-    Object.keys(m.flags).every((k) => m.flags[k] === false) &&
+    // guideTitles is the one flag that is not a switch: null when nothing is hidden.
+    Object.keys(m.flags).every((k) =>
+      k === 'guideTitles' ? m.flags[k] === null : m.flags[k] === false
+    ) &&
       !m.state.anyFilterEnabled &&
       !m.state.anyContentFilter &&
       !m.state.anyContentFilterButEmoji
