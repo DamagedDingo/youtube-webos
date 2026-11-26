@@ -7,6 +7,12 @@ permissions:
   contents: write
   pages: write
   id-token: write
+# One catalogue write at a time: release.yml dispatches this workflow and a
+# human publishing by hand raises the release event, so two runs can overlap
+# and both would commit repo.json to main.
+concurrency:
+  group: build-repo
+  cancel-in-progress: false
 jobs:
   update-repo:
     # Never for a pre-release: the test builds (auto-discussion.yml) are
